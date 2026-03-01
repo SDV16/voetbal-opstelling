@@ -14,7 +14,7 @@ PLAYERS = {
     "Jaimy": {"favourite":["sp"], "alternative":["lb","rb"], "emergency":[]},
     "Sjoerd": {"favourite":["cm"], "alternative":["sp"], "emergency":[]},
     "Pelle": {"favourite":["cm"], "alternative":["sp", "lb", "rb"], "emergency":[]},
-    "Tim": {"favourite":["sp"], "alternative":[], "emergency":["sp"]},
+    "Tim": {"favourite":["cm"], "alternative":[], "emergency":["sp"]},
     "Steijn": {"favourite":["cm"], "alternative":[], "emergency":["sp"]},
     "Jorra": {"favourite":["cm"], "alternative":[], "emergency":[]},
     "Tycho": {"favourite":["cm"], "alternative":[], "emergency":[]},
@@ -383,4 +383,5 @@ if st.button("Genereer opstellingen"):
                 })
 
             table.sort(key=lambda x: (-int(x["Trainingen"][0]), -float(x["Gekregen"].split()[0])))
+
             st.table(table)

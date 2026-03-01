@@ -9,7 +9,7 @@ st.set_page_config(layout="wide")
 # =====================================================
 PLAYERS = {
     "Jannick": {"favourite":["ra"], "alternative":["rb", "lb"], "emergency":["la"]},
-    "Collin": {"favourite":["lb"], "alternative":["rb", "sp"], "emergency":["sp"]},
+    "Collin": {"favourite":["lb"], "alternative":["rb"], "emergency":["sp"]},
     "Wout": {"favourite":["rb"], "alternative":["lb"], "emergency":["sp"]},
     "Jaimy": {"favourite":["sp"], "alternative":["lb","rb"], "emergency":[]},
     "Sjoerd": {"favourite":["cm"], "alternative":["sp"], "emergency":[]},
@@ -385,3 +385,4 @@ if st.button("Genereer opstellingen"):
             table.sort(key=lambda x: (-int(x["Trainingen"][0]), -float(x["Gekregen"].split()[0])))
 
             st.table(table)
+

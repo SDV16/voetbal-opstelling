@@ -8,20 +8,20 @@ st.set_page_config(layout="wide")
 # SPELERSDATABASE
 # =====================================================
 PLAYERS = {
-    "Jannick": {"favourite":["ra"], "alternative":["rb", "lb"], "emergency":["la"]},
+    "Jannick": {"favourite":["ra"], "alternative":["rb", "lb"], "emergency":["la", "ra"]},
     "Collin": {"favourite":["lb"], "alternative":["rb"], "emergency":["sp"]},
     "Wout": {"favourite":["rb"], "alternative":["lb"], "emergency":["sp"]},
     "Jaimy": {"favourite":["sp"], "alternative":["lb","rb"], "emergency":[]},
-    "Sjoerd": {"favourite":["cm"], "alternative":["sp"], "emergency":[]},
-    "Pelle": {"favourite":["cm"], "alternative":["sp", "lb", "rb"], "emergency":[]},
-    "Tim": {"favourite":["cm"], "alternative":[], "emergency":["sp"]},
+    "Sjoerd": {"favourite":["cm", "sp"], "alternative":[], "emergency":[]},
+    "Pelle": {"favourite":["sp"], "alternative":["cm", "lb", "rb"], "emergency":[]},
+    "Tim": {"favourite":["sp"], "alternative":["cm"], "emergency":[]},
     "Steijn": {"favourite":["cm"], "alternative":[], "emergency":["sp"]},
     "Jorra": {"favourite":["cm"], "alternative":[], "emergency":[]},
     "Tycho": {"favourite":["cm"], "alternative":[], "emergency":[]},
-    "Nord": {"favourite":["la"], "alternative":["ra"], "emergency":[]},
+    "Nord": {"favourite":["la"], "alternative":["ra"], "emergency":["cv"]},
     "Dinand": {"favourite":["ra", "la"], "alternative":[], "emergency":[]},
     "Sietse": {"favourite":["ra"], "alternative":["la"], "emergency":["cv"]},
-    "Stijn": {"favourite":["cv"], "alternative":[], "emergency":[]},
+    "Stijn": {"favourite":["cv"], "alternative":[], "emergency":["ra", "la"]},
     "Xander": {"favourite":["cv"], "alternative":[], "emergency":["ra","la"]},
     "Jens": {"favourite":["cv"], "alternative":[], "emergency":["ra","la"]},
     "Roef": {"favourite":["cv"], "alternative":[], "emergency":["cm"]},
@@ -39,8 +39,8 @@ BLOCK_OPTIONS = [30, 22.5, 20, 15, 10]
 st.title("Opstelling Generator – Eerlijke Minuten & Dynamische Blokken")
 
 st.sidebar.header("Training aftrek")
-bonus_1 = st.sidebar.number_input("Aftrek bij 1 training", 0, 30, 5)
-bonus_0 = st.sidebar.number_input("Aftrek bij 0 trainingen", 0, 30, 10)
+bonus_1 = st.sidebar.number_input("Aftrek bij 1 training", 0, 30, 10)
+bonus_0 = st.sidebar.number_input("Aftrek bij 0 trainingen", 0, 30, 20)
 
 st.header("Selecteer spelers")
 
@@ -383,6 +383,4 @@ if st.button("Genereer opstellingen"):
                 })
 
             table.sort(key=lambda x: (-int(x["Trainingen"][0]), -float(x["Gekregen"].split()[0])))
-
             st.table(table)
-

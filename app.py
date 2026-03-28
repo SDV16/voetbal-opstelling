@@ -25,7 +25,10 @@ PLAYERS = {
     "Xander": {"favourite":["cv"], "alternative":[], "emergency":["ra","la"]},
     "Jens": {"favourite":["cv"], "alternative":[], "emergency":["ra","la"]},
     "Roef": {"favourite":["cv"], "alternative":[], "emergency":["cm"]},
-    "Chris": {"favourite":["ra"], "alternative":["sp"], "emergency":["la", "rb", "lb"]},
+    "Chris": {"favourite":["ra"], "alternative":["sp", "cv"], "emergency":["la", "rb", "lb"]},
+    "Julian": {"favourite":["rb", "lb", "sp"], "alternative":[], "emergency":["cm"]},
+    "Teun": {"favourite":["rb", "lb", "sp"], "alternative":["cm"], "emergency":[]},
+    "Nicky": {"favourite":["ra", "la"], "alternative":[], "emergency":[]},
 }
 
 POSITIONS_ORDER = ["sp", "cv1", "cv2", "cm1", "cm2", "cm3", "lb", "rb", "la", "ra"]

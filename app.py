@@ -371,13 +371,6 @@ if st.button("Genereer opstellingen"):
                 if block_idx > 0 and (erin or eruit):
                     steps, adjusted_start = spread_substitutions(int(block_name.split("-")[0]), block_min, erin, eruit)
 
-                # sla wissels op voor latere minutenberekening
-                if "all_subs" not in st.session_state:
-                    st.session_state["all_subs"] = {}
-
-                st.session_state["all_subs"][block_name] = steps
-
-
                 # pas display block name aan als adjusted_start is gezet
                 display_block_name = block_name
                 if adjusted_start is not None:
@@ -435,38 +428,18 @@ if st.button("Genereer opstellingen"):
 
             st.header("Minutenoverzicht")
             table = []
-            # echte minuten berekenen
-            real_minutes, player_segments = calculate_real_minutes(blocks, schedule, st.session_state["all_subs"])
-            
-            table = []
             for p in selected_players:
-                g = real_minutes.get(p, 0)
+                pd = defaultdict(float)
+                blks = []
+                for i,(bn,bm) in enumerate(blocks,1):
+                    for pos,sp in schedule[bn].items():
+                        if sp == p:
+                            k = pos[:2] if pos.startswith(("cm","cv")) else pos
+                            pd[k] += bm
+                            blks.append(str(i))
+                g = mins[p]
                 r = targets[p]
                 diff = g - r
-            
-                # posities bepalen per segment
-                pos_minutes = defaultdict(int)
-                for (start, end) in player_segments.get(p, []):
-                    # bepaal in welk blok dit segment valt
-                    for block_name, block_min in blocks:
-                        b_start, b_end = map(int, block_name.split("-"))
-                        if start >= b_start and end <= b_end:
-                            # vind positie in dit blok
-                            pos = schedule[block_name]
-                            for position, speler in pos.items():
-                                if speler == p:
-                                    base = position[:2] if position.startswith(("cm","cv")) else position
-                                    pos_minutes[base] += (end - start)
-            
-                table.append({
-                    "Speler": p,
-                    "Trainingen": f"{training_counts[p]}x",
-                    "Recht op": f"{int(round(r))} min",
-                    "Gekregen": f"{int(round(g))} min",
-                    "Verschil": f"{int(round(diff))} min",
-                    "Posities": ", ".join(f"{k}:{v}" for k,v in pos_minutes.items()),
-                })
-
                 table.append({
                     "Speler":p,
                     "Trainingen":f"{training_counts[p]}x",
@@ -478,43 +451,6 @@ if st.button("Genereer opstellingen"):
                 })
             table.sort(key=lambda x:(-int(x["Trainingen"][0]),-float(x["Gekregen"].split()[0])))
             st.table(table)
-
-        def calculate_real_minutes(blocks, schedule, all_subs):
-            """
-            Berekent echte minuten per speler op basis van wisselmomenten.
-            """
-            player_segments = defaultdict(list)
-        
-            for block_name, block_min in blocks:
-                start, end = map(int, block_name.split("-"))
-                block_players = schedule[block_name].copy()
-        
-                # beginsegment: iedereen speelt het hele blok
-                active = {p: start for p in block_players.values()}
-        
-                # pas wissels toe
-                for minute, pairs in all_subs.get(block_name, []):
-                    for sp_in, sp_out in pairs:
-                        # speler eruit → segment eindigt
-                        if sp_out in active:
-                            player_segments[sp_out].append((active[sp_out], minute))
-                            del active[sp_out]
-        
-                        # speler erin → segment start
-                        active[sp_in] = minute
-        
-                # blok eindigt → alle actieve spelers krijgen segment tot einde
-                for p, seg_start in active.items():
-                    player_segments[p].append((seg_start, end))
-        
-            # bereken totale minuten
-            real_minutes = {}
-            for p, segs in player_segments.items():
-                real_minutes[p] = sum(e - s for s, e in segs)
-        
-            return real_minutes, player_segments
-
-
 
             # =====================================================
             # POSITIE-OVERZICHT (Slots/Totaal: slots / aantal geselecteerde spelers die die basispositie kunnen spelen)

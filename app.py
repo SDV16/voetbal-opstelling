@@ -364,7 +364,7 @@ else:
             st.markdown(f"## Blok {block_idx+1}: {block_name} ({block_min} min)")
         
             # twee kolommen: links opstelling, rechts wissels
-            col_left, col_right = st.columns([1,2])
+            col_left, col_right = st.columns([1,3])
         
             with col_left:
                 # -------------------------------------------------
@@ -387,19 +387,18 @@ else:
                     return f"{n:^15}"
         
                 opstelling = f"""
-                                        {f(la)}   {f(sp)}   {f(ra)}
+                        {f(la)}   {f(sp)}   {f(ra)}
         
-                                {f(cm1)}   {f(cm2)}   {f(cm3)}
+                        {f(cm1)}   {f(cm2)}   {f(cm3)}
         
-                        {f(lb)}   {f(cv1)}   {f(cv2)}   {f(rb)}
+                {f(lb)}   {f(cv1)}   {f(cv2)}   {f(rb)}
                 """
         
                 st.markdown(f"```text\n{opstelling}\n```")
-        
+            # -------------------------------------------------
+            # WISSELS
+            # -------------------------------------------------
             with col_right:
-                # -------------------------------------------------
-                # WISSELS
-                # -------------------------------------------------
                 st.write("**Wissels in dit blok**")
         
                 erin = st.multiselect(

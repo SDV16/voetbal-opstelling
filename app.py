@@ -381,14 +381,14 @@ else:
             ra  = speler["ra"]
         
             def f(n):
-                return f"{n:^15}"
+                return f"{n:^10}"
         
             opstelling = f"""
                     {f(la)}   {f(sp)}   {f(ra)}
         
                     {f(cm1)}   {f(cm2)}   {f(cm3)}
         
-            {f(lb)}   {f(cv1)}   {f(cv2)}   {f(rb)}
+              {f(lb)}   {f(cv1)}   {f(cv2)}   {f(rb)}
             """
         
             st.markdown(f"<pre>{opstelling}</pre>", unsafe_allow_html=True)

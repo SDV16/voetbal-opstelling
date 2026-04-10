@@ -366,9 +366,9 @@ else:
             # -------------------------------------------------
             # FANCY 4‑3‑3 VISUELE OPSTELLING (GEFIXT)
             # -------------------------------------------------
+
             speler = schedule[block_name]
             
-            # posities ophalen
             sp  = speler["sp"]
             cv1 = speler["cv1"]
             cv2 = speler["cv2"]
@@ -381,7 +381,7 @@ else:
             ra  = speler["ra"]
             
             # vaste breedte voor elke naam
-            def f(n): 
+            def f(n):
                 return f"{n:^15}"
             
             opstelling = f"""
@@ -392,9 +392,9 @@ else:
                         {f(lb)}   {f(cv1)}   {f(cv2)}   {f(rb)}
             """
             
-            st.text(opstelling)
+            st.markdown(f"```text\n{opstelling}\n```")
 
-        
+
             # -------------------------------------------------
             # WISSELS
             # -------------------------------------------------

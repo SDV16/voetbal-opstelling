@@ -363,25 +363,32 @@ else:
         for block_idx, (block_name, block_min) in enumerate(blocks):
             st.markdown(f"## Blok {block_idx+1}: {block_name} ({block_min} min)")
 
-            # 4‑3‑3 OVERZICHT (terug zoals jij het had)
-            st.write("**4‑3‑3 overzicht**")
-            opst = []
-            for pos in POSITIONS_ORDER:
-                speler = schedule[block_name][pos]
-                base = pos[:2] if pos.startswith(("cm","cv")) else pos
-                opst.append({"Positie": base, "Speler": speler})
-            st.table(opst)
-
-            # WISSELS
-            col1, col2 = st.columns(2)
-            with col1:
-                st.write("**Basisopstelling (detail)**")
-                base_table = []
-                for pos in POSITIONS_ORDER:
-                    speler = schedule[block_name][pos]
-                    base = pos[:2] if pos.startswith(("cm","cv")) else pos
-                    base_table.append({"Positie": pos, "Basis": base, "Speler": speler})
-                st.table(base_table)
+                    # 4‑3‑3 OVERZICHT (terug zoals jij het had)
+                    # FANCY 4‑3‑3 VISUELE OPSTELLING
+        speler = schedule[block_name]
+        
+        # posities ophalen
+        sp = speler["sp"]
+        cv1 = speler["cv1"]
+        cv2 = speler["cv2"]
+        cm1 = speler["cm1"]
+        cm2 = speler["cm2"]
+        cm3 = speler["cm3"]
+        lb = speler["lb"]
+        rb = speler["rb"]
+        la = speler["la"]
+        ra = speler["ra"]
+        
+        # ASCII veldlayout
+        opstelling = f"""
+                        {la:^15}      {sp:^15}      {ra:^15}
+        
+                        {cm1:^15}      {cm2:^15}      {cm3:^15}
+        
+                {lb:^15}      {cv1:^15}      {cv2:^15}      {rb:^15}
+        """
+        
+        st.text(opstelling)
 
             with col2:
                 st.write("**Wissels in dit blok**")

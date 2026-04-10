@@ -390,10 +390,7 @@ else:
             
                         {f(lb)}   {f(cv1)}   {f(cv2)}   {f(rb)}
                 """
-            
-                st.markdown(f"<pre>{opstelling}</pre>", unsafe_allow_html=True)
-
-
+                
             # -------------------------------------------------
             # RECHTERKOLOM — WISSELS
             # -------------------------------------------------

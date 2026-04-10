@@ -364,10 +364,11 @@ else:
             st.markdown(f"## Blok {block_idx+1}: {block_name} ({block_min} min)")
         
             # -------------------------------------------------
-            # FANCY 4‑3‑3 VISUELE OPSTELLING
+            # FANCY 4‑3‑3 VISUELE OPSTELLING (GEFIXT)
             # -------------------------------------------------
             speler = schedule[block_name]
-        
+            
+            # posities ophalen
             sp  = speler["sp"]
             cv1 = speler["cv1"]
             cv2 = speler["cv2"]
@@ -378,17 +379,21 @@ else:
             rb  = speler["rb"]
             la  = speler["la"]
             ra  = speler["ra"]
-        
+            
+            # vaste breedte voor elke naam
+            def f(n): 
+                return f"{n:^15}"
+            
             opstelling = f"""
-                        {la:^15}      {sp:^15}      {ra:^15}
-
-                {cm1:^15}      {cm2:^15}      {cm3:^15}
-
-        {lb:^15}      {cv1:^15}      {cv2:^15}      {rb:^15}
-"""
-
-        
+                                        {f(la)}   {f(sp)}   {f(ra)}
+            
+                                {f(cm1)}   {f(cm2)}   {f(cm3)}
+            
+                        {f(lb)}   {f(cv1)}   {f(cv2)}   {f(rb)}
+            """
+            
             st.text(opstelling)
+
         
             # -------------------------------------------------
             # WISSELS

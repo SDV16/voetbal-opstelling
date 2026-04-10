@@ -351,7 +351,9 @@ else:
         st.error("Kon geen geldige blokverdeling maken met deze instellingen.")
     else:
         st.subheader("Gekozen blokpatroon")
-        st.write("Blokken:", ", ".join(f"{b[0]} min" for _, b in enumerate([(None, s) for _, s in blocks])))
+
+        # FIX: geen None min meer
+        st.write("Blokken:", ", ".join(f"{size} min" for _, size in blocks))
 
         # -------------------------------------------------
         # BLOKKEN + WISSELS + SUBS_PER_BLOCK (DEEL 3)
@@ -359,11 +361,21 @@ else:
         subs_per_block = {}
 
         for block_idx, (block_name, block_min) in enumerate(blocks):
-            st.markdown(f"### Blok {block_idx+1}: {block_name} ({block_min} min)")
+            st.markdown(f"## Blok {block_idx+1}: {block_name} ({block_min} min)")
 
+            # 4‑3‑3 OVERZICHT (terug zoals jij het had)
+            st.write("**4‑3‑3 overzicht**")
+            opst = []
+            for pos in POSITIONS_ORDER:
+                speler = schedule[block_name][pos]
+                base = pos[:2] if pos.startswith(("cm","cv")) else pos
+                opst.append({"Positie": base, "Speler": speler})
+            st.table(opst)
+
+            # WISSELS
             col1, col2 = st.columns(2)
             with col1:
-                st.write("**Basisopstelling**")
+                st.write("**Basisopstelling (detail)**")
                 base_table = []
                 for pos in POSITIONS_ORDER:
                     speler = schedule[block_name][pos]
@@ -371,13 +383,12 @@ else:
                     base_table.append({"Positie": pos, "Basis": base, "Speler": speler})
                 st.table(base_table)
 
-            # wissels bepalen
             with col2:
                 st.write("**Wissels in dit blok**")
 
                 erin = st.multiselect(
                     f"Spelers erin in blok {block_name}",
-                    options=[p for p in players],
+                    options=players,
                     key=f"erin_{block_name}"
                 )
                 eruit = st.multiselect(
@@ -396,7 +407,6 @@ else:
                 else:
                     steps = []
 
-                # DEEL 3: wissels opslaan
                 subs_per_block[block_name] = steps
 
                 if steps:
@@ -411,40 +421,40 @@ else:
         # MINUTENOVERZICHT (ECHTE MINUTEN + OUDE KOLLOMMEN)
         # -------------------------------------------------
         st.header("Minutenoverzicht (echte minuten)")
-        
+
         real_minutes, segments = compute_real_minutes(blocks, schedule, subs_per_block)
-        
+
         table = []
         for p in players:
             gekregen = real_minutes.get(p, 0)
             recht = targets[p]
             diff = gekregen - recht
-        
+
             # posities per segment
             pos_minutes = defaultdict(int)
             blokken_gespeeld = []
-        
+
             for (s, e) in segments.get(p, []):
                 duration = e - s
-        
+
                 for block_name, _ in blocks:
                     b_start, b_end = map(int, block_name.split("-"))
                     if s >= b_start and e <= b_end:
-        
-                        # bloknummer bepalen
+
+                        # bloknummer
                         blok_index = [bn for bn, _ in blocks].index(block_name) + 1
                         blokken_gespeeld.append(str(blok_index))
-        
-                        # positie bepalen
+
+                        # positie
                         for pos, speler in schedule[block_name].items():
                             if speler == p:
                                 base = pos[:2] if pos.startswith(("cm","cv")) else pos
                                 pos_minutes[base] += duration
-        
+
             # oude kolommen terug
             trainingen = training_counts[p]
             prio = "Ja" if priority_flags.get(p, False) else "Nee"
-        
+
             table.append({
                 "Speler": p,
                 "Trainingen": trainingen,
@@ -455,38 +465,6 @@ else:
                 "Blokken": ", ".join(blokken_gespeeld) if blokken_gespeeld else "—",
                 "Posities": ", ".join(f"{k}:{v}m" for k, v in pos_minutes.items()) if pos_minutes else "—",
             })
-        
+
         st.table(table)
 
-
-        # -------------------------------------------------
-        # POSITIE-OVERZICHT (DEEL 5)
-        # -------------------------------------------------
-        st.subheader("Positie-overzicht (echte minuten)")
-
-        position_totals = defaultdict(int)
-
-        for p in players:
-            for (s, e) in segments.get(p, []):
-                duration = e - s
-                for block_name, _ in blocks:
-                    b_start, b_end = map(int, block_name.split("-"))
-                    if s >= b_start and e <= b_end:
-                        for pos, speler in schedule[block_name].items():
-                            if speler == p:
-                                base = pos[:2] if pos.startswith(("cm","cv")) else pos
-                                position_totals[base] += duration
-
-        total_all = sum(position_totals.values()) or 1
-
-        pos_table = []
-        for bp in ["sp", "cv", "cm", "lb", "rb", "la", "ra"]:
-            mins_bp = position_totals[bp]
-            perc = round(mins_bp / total_all * 100, 1)
-            pos_table.append({
-                "Positie": bp,
-                "Totaal minuten": f"{mins_bp} min",
-                "Percentage": f"{perc}%",
-            })
-
-        st.table(pos_table)

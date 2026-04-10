@@ -370,39 +370,39 @@ else:
             # LINKERKOLOM — ASCII 4‑3‑3 OPSTELLING
             # -------------------------------------------------
             with col_left:
-            speler = schedule[block_name]
-        
-            sp  = speler["sp"]
-            cv1 = speler["cv1"]
-            cv2 = speler["cv2"]
-            cm1 = speler["cm1"]
-            cm2 = speler["cm2"]
-            cm3 = speler["cm3"]
-            lb  = speler["lb"]
-            rb  = speler["rb"]
-            la  = speler["la"]
-            ra  = speler["ra"]
-        
-            # vaste breedte voor elke naam — FIXED
-            def center(n):
-                return f"{n:^15}"
-        
-            opstelling = f"""
-                            {center(la)}   {center(sp)}   {center(ra)}
-        
-                    {center(cm1)}   {center(cm2)}   {center(cm3)}
-        
-            {center(lb)}   {center(cv1)}   {center(cv2)}   {center(rb)}
-            """
-        
-            st.markdown(
-                f"""
-                <pre style="font-size:14px; white-space: pre; overflow-x: hidden;">
-        {opstelling}
-                </pre>
-                """,
-                unsafe_allow_html=True
-            )
+                speler = schedule[block_name]
+            
+                sp  = speler["sp"]
+                cv1 = speler["cv1"]
+                cv2 = speler["cv2"]
+                cm1 = speler["cm1"]
+                cm2 = speler["cm2"]
+                cm3 = speler["cm3"]
+                lb  = speler["lb"]
+                rb  = speler["rb"]
+                la  = speler["la"]
+                ra  = speler["ra"]
+            
+                # vaste breedte voor elke naam — FIXED
+                def center(n):
+                    return f"{n:^15}"
+            
+                opstelling = f"""
+                                {center(la)}   {center(sp)}   {center(ra)}
+            
+                        {center(cm1)}   {center(cm2)}   {center(cm3)}
+            
+                {center(lb)}   {center(cv1)}   {center(cv2)}   {center(rb)}
+                """
+            
+                st.markdown(
+                    f"""
+                    <pre style="font-size:14px; white-space: pre; overflow-x: hidden;">
+            {opstelling}
+                    </pre>
+                    """,
+                    unsafe_allow_html=True
+                )
 
 
             # -------------------------------------------------

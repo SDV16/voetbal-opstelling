@@ -363,38 +363,43 @@ else:
         for block_idx, (block_name, block_min) in enumerate(blocks):
             st.markdown(f"## Blok {block_idx+1}: {block_name} ({block_min} min)")
         
-            # twee kolommen: links opstelling, rechts wissels
-            col_left, col_right = st.columns([1,2])
+            # Kolommen: 1/3 links (opstelling), 2/3 rechts (wissels)
+            col_left, col_right = st.columns([1, 2])
         
+            # -------------------------------------------------
+            # LINKERKOLOM — ASCII 4‑3‑3 OPSTELLING
+            # -------------------------------------------------
             with col_left:
                 speler = schedule[block_name]
         
-            sp  = speler["sp"]
-            cv1 = speler["cv1"]
-            cv2 = speler["cv2"]
-            cm1 = speler["cm1"]
-            cm2 = speler["cm2"]
-            cm3 = speler["cm3"]
-            lb  = speler["lb"]
-            rb  = speler["rb"]
-            la  = speler["la"]
-            ra  = speler["ra"]
+                sp  = speler["sp"]
+                cv1 = speler["cv1"]
+                cv2 = speler["cv2"]
+                cm1 = speler["cm1"]
+                cm2 = speler["cm2"]
+                cm3 = speler["cm3"]
+                lb  = speler["lb"]
+                rb  = speler["rb"]
+                la  = speler["la"]
+                ra  = speler["ra"]
         
-            def f(n):
-                return f"{n:^15}"
+                # vaste breedte voor elke naam
+                def f(n):
+                    return f"{n:^15}"
         
-            opstelling = f"""
-                    {f(la)}   {f(sp)}   {f(ra)}
+                opstelling = f"""
+                                    {f(la)}   {f(sp)}   {f(ra)}
         
-                    {f(cm1)}   {f(cm2)}   {f(cm3)}
+                            {f(cm1)}   {f(cm2)}   {f(cm3)}
         
-              {f(lb)}   {f(cv1)}   {f(cv2)}   {f(rb)}
-            """
-            
+                    {f(lb)}   {f(cv1)}   {f(cv2)}   {f(rb)}
+                """
+        
+                # <pre> behoudt spaties en voorkomt horizontale scroll
                 st.markdown(f"<pre>{opstelling}</pre>", unsafe_allow_html=True)
-
+        
             # -------------------------------------------------
-            # WISSELS
+            # RECHTERKOLOM — WISSELS
             # -------------------------------------------------
             with col_right:
                 st.write("**Wissels in dit blok**")
@@ -430,6 +435,45 @@ else:
                         st.write(f"- minuut {minute}: {txt}")
                 else:
                     st.write("Geen wissels in dit blok.")
+        
+        
+                    # -------------------------------------------------
+                    # WISSELS
+                    # -------------------------------------------------
+                    with col_right:
+                        st.write("**Wissels in dit blok**")
+                
+                        erin = st.multiselect(
+                            f"Spelers erin in blok {block_name}",
+                            options=players,
+                            key=f"erin_{block_name}"
+                        )
+                
+                        eruit = st.multiselect(
+                            f"Spelers eruit in blok {block_name}",
+                            options=[schedule[block_name][pos] for pos in POSITIONS_ORDER],
+                            key=f"eruit_{block_name}"
+                        )
+                
+                        if block_idx > 0 and (erin or eruit):
+                            steps, adjusted_start = spread_substitutions(
+                                int(block_name.split("-")[0]),
+                                block_min,
+                                erin,
+                                eruit
+                            )
+                        else:
+                            steps = []
+                
+                        subs_per_block[block_name] = steps
+                
+                        if steps:
+                            st.write("**Wisselmomenten:**")
+                            for minute, pairs in steps:
+                                txt = ", ".join(f"{p_out} → {p_in}" for p_in, p_out in pairs)
+                                st.write(f"- minuut {minute}: {txt}")
+                        else:
+                            st.write("Geen wissels in dit blok.")
 
 
         # -------------------------------------------------

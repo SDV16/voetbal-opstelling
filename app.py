@@ -369,7 +369,11 @@ else:
             # -------------------------------------------------
             # LINKERKOLOM — ASCII 4‑3‑3 OPSTELLING
             # -------------------------------------------------
+            # twee kolommen: links opstelling (1/4), rechts wissels (3/4)
+            col_left, col_right = st.columns([1,3])
+            
             with col_left:
+                # FANCY 4‑3‑3 VISUELE OPSTELLING (GEFIXT + MARKDOWN)
                 speler = schedule[block_name]
             
                 sp  = speler["sp"]
@@ -383,26 +387,54 @@ else:
                 la  = speler["la"]
                 ra  = speler["ra"]
             
-                # vaste breedte voor elke naam — FIXED
-                def center(n):
+                def f(n):
                     return f"{n:^15}"
             
                 opstelling = f"""
-                                {center(la)}   {center(sp)}   {center(ra)}
+                                        {f(la)}   {f(sp)}   {f(ra)}
             
-                        {center(cm1)}   {center(cm2)}   {center(cm3)}
+                                {f(cm1)}   {f(cm2)}   {f(cm3)}
             
-                {center(lb)}   {center(cv1)}   {center(cv2)}   {center(rb)}
+                        {f(lb)}   {f(cv1)}   {f(cv2)}   {f(rb)}
                 """
-            
-                st.markdown(
-                    f"""
-                    <pre style="font-size:14px; white-space: pre; overflow-x: hidden;">
-            {opstelling}
-                    </pre>
-                    """,
-                    unsafe_allow_html=True
-                )
+
+    st.markdown(f"```text\n{opstelling}\n```")
+
+with col_right:
+    st.write("**Wissels in dit blok**")
+
+    erin = st.multiselect(
+        f"Spelers erin in blok {block_name}",
+        options=players,
+        key=f"erin_{block_name}"
+    )
+
+    eruit = st.multiselect(
+        f"Spelers eruit in blok {block_name}",
+        options=[schedule[block_name][pos] for pos in POSITIONS_ORDER],
+        key=f"eruit_{block_name}"
+    )
+
+    if block_idx > 0 and (erin or eruit):
+        steps, adjusted_start = spread_substitutions(
+            int(block_name.split("-")[0]),
+            block_min,
+            erin,
+            eruit
+        )
+    else:
+        steps = []
+
+    subs_per_block[block_name] = steps
+
+    if steps:
+        st.write("**Wisselmomenten:**")
+        for minute, pairs in steps:
+            txt = ", ".join(f"{p_out} → {p_in}" for p_in, p_out in pairs)
+            st.write(f"- minuut {minute}: {txt}")
+    else:
+        st.write("Geen wissels in dit blok.")
+
 
 
             # -------------------------------------------------

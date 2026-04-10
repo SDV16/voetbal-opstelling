@@ -368,28 +368,28 @@ else:
         
             with col_left:
                 speler = schedule[block_name]
-            
-                sp  = speler["sp"]
-                cv1 = speler["cv1"]
-                cv2 = speler["cv2"]
-                cm1 = speler["cm1"]
-                cm2 = speler["cm2"]
-                cm3 = speler["cm3"]
-                lb  = speler["lb"]
-                rb  = speler["rb"]
-                la  = speler["la"]
-                ra  = speler["ra"]
-            
-                def f(n):
-                    return f"{n:^15}"
-            
-                opstelling = f"""
-                        {f(la)}   {f(sp)}   {f(ra)}
-            
-                        {f(cm1)}   {f(cm2)}   {f(cm3)}
-            
-                  {f(lb)}   {f(cv1)}   {f(cv2)}   {f(rb)}
-                """
+        
+            sp  = speler["sp"]
+            cv1 = speler["cv1"]
+            cv2 = speler["cv2"]
+            cm1 = speler["cm1"]
+            cm2 = speler["cm2"]
+            cm3 = speler["cm3"]
+            lb  = speler["lb"]
+            rb  = speler["rb"]
+            la  = speler["la"]
+            ra  = speler["ra"]
+        
+            def f(n):
+                return f"{n:^15}"
+        
+            opstelling = f"""
+                    {f(la)}   {f(sp)}   {f(ra)}
+        
+                    {f(cm1)}   {f(cm2)}   {f(cm3)}
+        
+              {f(lb)}   {f(cv1)}   {f(cv2)}   {f(rb)}
+            """
             
                 st.markdown(f"<pre>{opstelling}</pre>", unsafe_allow_html=True)
 

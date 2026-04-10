@@ -247,45 +247,42 @@ def merge_steps_same_minute(steps):
 
 def spread_substitutions(block_start, block_size, players_in, players_out):
     """
-    Return: (steps, adjusted_block_start)
-    - steps: list of (minute, [(in,out),...]) met geen duplicate minuten (samengevoegd).
-    - adjusted_block_start: None of nieuwe start minuut (int) wanneer we willen tonen als bijv. 45-...
+    Max 2 wisselmomenten per blok
+    Max 2 spelers per wisselmoment
     """
     subs = list(zip(players_in, players_out))
-    n = len(subs)
+
+    # --- Max 4 wissels totaal (2 momenten × 2 spelers) ---
+    subs = subs[:4]
 
     # standaard afronden op veelvoud van 5
     minute = 5 * round(block_start / 5)
 
-    # voorkom wissel precies op minuut 40: verplaats naar 45 (vast)
+    # voorkom wissel precies op minuut 40 → verplaats naar 45
     adjusted_block_start = None
     if minute == 40:
         minute = 45
         adjusted_block_start = 45
 
-    # klein blok of weinig wissels: alles in één moment
-    if block_size < 15 or n <= 3:
-        steps = [(minute, subs)]
-        return merge_steps_same_minute(steps), adjusted_block_start
+    # als weinig wissels: alles in één moment
+    if len(subs) <= 2:
+        return [(minute, subs)], adjusted_block_start
 
-    # anders spreiden in stappen van maximaal 3 wissels per moment
-    max_per_step = 3
+    # anders: splits in 2 momenten van max 2 spelers
     steps = []
-    i = 0
-    step_offset = 0
-    while i < n:
-        step_in = subs[i:i+max_per_step]
-        step_minute = 5 * round((block_start + 5 * step_offset) / 5)
-        # voorkom dat een stap precies op 40 valt: verplaats naar 45
-        if step_minute == 40:
-            step_minute = 45
-            if step_offset == 0:
-                adjusted_block_start = 45
-        steps.append((step_minute, step_in))
-        i += max_per_step
-        step_offset += 1
+    max_per_step = 2
 
-    return merge_steps_same_minute(steps), adjusted_block_start
+    # moment 1
+    steps.append((minute, subs[:max_per_step]))
+
+    # moment 2 → 5 minuten later
+    minute2 = minute + 5
+    if minute2 == 40:
+        minute2 = 45
+    steps.append((minute2, subs[max_per_step:]))
+
+    return steps, adjusted_block_start
+
 
 # =====================================================
 # EVALUATIE

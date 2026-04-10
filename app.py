@@ -359,16 +359,19 @@ else:
         # BLOKKEN + WISSELS + SUBS_PER_BLOCK (DEEL 3)
         # -------------------------------------------------
         subs_per_block = {}
-
+        
         for block_idx, (block_name, block_min) in enumerate(blocks):
             st.markdown(f"## Blok {block_idx+1}: {block_name} ({block_min} min)")
-
-            # Kolommen: 1/3 links (opstelling), 2/3 rechts (wissels)
-            col_left, col_right = st.columns([1, 3])
-            
+        
+            # twee kolommen: links opstelling, rechts wissels
+            col_left, col_right = st.columns([2,1])
+        
             with col_left:
+                # -------------------------------------------------
+                # FANCY 4‑3‑3 VISUELE OPSTELLING (GEFIXT + MARKDOWN)
+                # -------------------------------------------------
                 speler = schedule[block_name]
-            
+        
                 sp  = speler["sp"]
                 cv1 = speler["cv1"]
                 cv2 = speler["cv2"]
@@ -379,38 +382,38 @@ else:
                 rb  = speler["rb"]
                 la  = speler["la"]
                 ra  = speler["ra"]
-            
+        
                 def f(n):
-                    return f"{n:^10}"
-            
+                    return f"{n:^15}"
+        
                 opstelling = f"""
                                 {f(la)}   {f(sp)}   {f(ra)}
-            
+        
                                 {f(cm1)}   {f(cm2)}   {f(cm3)}
-            
+        
                         {f(lb)}   {f(cv1)}   {f(cv2)}   {f(rb)}
                 """
-                
-                st.markdown(f"<pre>{opstelling}</pre>", unsafe_allow_html=True)
-                
-            # -------------------------------------------------
-            # RECHTERKOLOM — WISSELS
-            # -------------------------------------------------
+        
+                st.markdown(f"```text\n{opstelling}\n```")
+        
             with col_right:
+                # -------------------------------------------------
+                # WISSELS
+                # -------------------------------------------------
                 st.write("**Wissels in dit blok**")
-
+        
                 erin = st.multiselect(
                     f"Spelers erin in blok {block_name}",
                     options=players,
                     key=f"erin_{block_name}"
                 )
-
+        
                 eruit = st.multiselect(
                     f"Spelers eruit in blok {block_name}",
                     options=[schedule[block_name][pos] for pos in POSITIONS_ORDER],
                     key=f"eruit_{block_name}"
                 )
-
+        
                 if block_idx > 0 and (erin or eruit):
                     steps, adjusted_start = spread_substitutions(
                         int(block_name.split("-")[0]),
@@ -420,9 +423,9 @@ else:
                     )
                 else:
                     steps = []
-
+        
                 subs_per_block[block_name] = steps
-
+        
                 if steps:
                     st.write("**Wisselmomenten:**")
                     for minute, pairs in steps:
@@ -430,6 +433,7 @@ else:
                         st.write(f"- minuut {minute}: {txt}")
                 else:
                     st.write("Geen wissels in dit blok.")
+
 
         # -------------------------------------------------
         # MINUTENOVERZICHT (ECHTE MINUTEN + OUDE KOLLOMMEN)

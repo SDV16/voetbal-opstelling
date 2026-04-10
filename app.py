@@ -201,7 +201,7 @@ def generate_schedule(players, targets, priority_flags, blocks):
                     continue
                 limit = -10
                 if scarcity_bonus(p,pos,players) > 0:
-                    limit = -20
+                    limit = -15
                 if remaining[p] - b_min >= limit:
                     cands.append(p)
             if not cands:
@@ -292,8 +292,8 @@ def spread_substitutions(block_start, block_size, players_in, players_out):
 # =====================================================
 def evaluate_blocks(players,training_counts,priority_flags,pattern):
     blocks = build_blocks_from_pattern(pattern)
-        if blocks is None:
-    return float('inf'), None, None, None, None
+    if blocks is None:
+        return float('inf'), None, None, None, None
     targets = calculate_target_minutes(players,training_counts)
     schedule,_ = generate_schedule(players,targets,priority_flags,blocks)
     if schedule is None:

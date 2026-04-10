@@ -245,6 +245,43 @@ def merge_steps_same_minute(steps):
         merged[minute].extend(pairs)
     return sorted([(m, merged[m]) for m in sorted(merged.keys())], key=lambda x: x[0])
 
+def compute_real_minutes(blocks, schedule, subs_per_block):
+    """
+    blocks: list[(block_name, block_size)]
+    schedule: dict[block_name] -> {positie: speler}
+    subs_per_block: dict[block_name] -> [(minute, [(in,out), ...]), ...]
+    """
+    segments = defaultdict(list)
+
+    for block_name, _ in blocks:
+        start, end = map(int, block_name.split("-"))
+
+        # begin: iedereen speelt vanaf block-start
+        active = {}
+        for pos, p in schedule[block_name].items():
+            active[p] = start
+
+        # wissels toepassen
+        for minute, pairs in subs_per_block.get(block_name, []):
+            for p_in, p_out in pairs:
+
+                # speler eruit
+                if p_out in active:
+                    segments[p_out].append((active[p_out], minute))
+                    del active[p_out]
+
+                # speler erin
+                if p_in not in active:
+                    active[p_in] = minute
+
+        # blok eindigt
+        for p, s in active.items():
+            segments[p].append((s, end))
+
+    # totale minuten
+    real_minutes = {p: sum(e - s for s, e in segs) for p, segs in segments.items()}
+    return real_minutes, segments
+
 def spread_substitutions(block_start, block_size, players_in, players_out):
     """
     Max 2 wisselmomenten per blok
@@ -295,11 +332,11 @@ def evaluate_blocks(players,training_counts,priority_flags,pattern):
     schedule,_ = generate_schedule(players,targets,priority_flags,blocks)
     if schedule is None:
         return float('inf'),None,None,None,None
-    mins = defaultdict(float)
-    for b_name,b_min in blocks:
-        for pos,sp in schedule[b_name].items():
-            if sp in players:
-                mins[sp] += b_min
+    # --- ECHTE MINUTEN BEREKENEN ---
+    # subs_per_block moet bestaan op dit moment
+    real_minutes, _ = compute_real_minutes(blocks, schedule, subs_per_block)
+    mins = real_minutes
+
     total_dev = sum(abs(mins[p] - targets[p]) for p in players)
     return total_dev,blocks,schedule,targets,mins
 
@@ -354,6 +391,8 @@ if st.button("Genereer opstellingen"):
 
             prev_players = set()
 
+            subs_per_block = {}
+            
             for block_idx,(block_name,block_min) in enumerate(blocks):
                 # bepaal huidige spelers voor dit blok
                 current_players = set()
@@ -370,6 +409,11 @@ if st.button("Genereer opstellingen"):
                 steps = []
                 if block_idx > 0 and (erin or eruit):
                     steps, adjusted_start = spread_substitutions(int(block_name.split("-")[0]), block_min, erin, eruit)
+                else:
+                    steps = []
+            
+                # ⬇️ DEEL 3: wissels opslaan
+                subs_per_block[block_name] = steps
 
                 # pas display block name aan als adjusted_start is gezet
                 display_block_name = block_name
@@ -426,27 +470,39 @@ if st.button("Genereer opstellingen"):
 
                 prev_players = current_players.copy()
 
-            st.header("Minutenoverzicht")
+            st.header("Minutenoverzicht (echte minuten)")
+            # echte minuten + segmenten berekenen
+            real_minutes, segments = compute_real_minutes(blocks, schedule, subs_per_block)
+            
             table = []
             for p in selected_players:
-                pd = defaultdict(float)
-                blks = []
-                for i,(bn,bm) in enumerate(blocks,1):
-                    for pos,sp in schedule[bn].items():
-                        if sp == p:
-                            k = pos[:2] if pos.startswith(("cm","cv")) else pos
-                            pd[k] += bm
-                            blks.append(str(i))
-                g = mins[p]
-                r = targets[p]
-                diff = g - r
+            
+                gekregen = real_minutes.get(p, 0)
+                recht = targets[p]
+                diff = gekregen - recht
+            
+                # posities per segment
+                pos_minutes = defaultdict(int)
+            
+                for (s, e) in segments.get(p, []):
+                    duration = e - s
+            
+                    # bepaal in welk blok dit segment valt
+                    for block_name, _ in blocks:
+                        b_start, b_end = map(int, block_name.split("-"))
+                        if s >= b_start and e <= b_end:
+                            # zoek positie van speler in dit blok
+                            for pos, speler in schedule[block_name].items():
+                                if speler == p:
+                                    base = pos[:2] if pos.startswith(("cm","cv")) else pos
+                                    pos_minutes[base] += duration
                 table.append({
                     "Speler":p,
                     "Trainingen":f"{training_counts[p]}x",
                     "Recht op":f"{int(round(r))} min",
                     "Gekregen":f"{int(round(g))} min",
                     "Verschil":f"{int(round(diff))} min",
-                    "Posities":", ".join(f"{k}:{int(round(v))}" for k,v in pd.items()),
+                    "Posities": ", ".join(f"{k}:{v}m" for k,v in pos_minutes.items())
                     "Blokken":", ".join(blks)
                 })
             table.sort(key=lambda x:(-int(x["Trainingen"][0]),-float(x["Gekregen"].split()[0])))

@@ -367,7 +367,6 @@ else:
             col_left, col_right = st.columns([1, 3])
             
             with col_left:
-                # FANCY 4‑3‑3 VISUELE OPSTELLING (GEFIXT + MARKDOWN)
                 speler = schedule[block_name]
             
                 sp  = speler["sp"]
@@ -391,8 +390,9 @@ else:
             
                         {f(lb)}   {f(cv1)}   {f(cv2)}   {f(rb)}
                 """
+            
+                st.markdown(f"<pre>{opstelling}</pre>", unsafe_allow_html=True)
 
-            st.markdown(f"```text\n{opstelling}\n```")
 
             # -------------------------------------------------
             # RECHTERKOLOM — WISSELS

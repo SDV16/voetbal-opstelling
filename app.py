@@ -363,54 +363,84 @@ else:
         for block_idx, (block_name, block_min) in enumerate(blocks):
             st.markdown(f"## Blok {block_idx+1}: {block_name} ({block_min} min)")
         
-            # twee kolommen: links opstelling, rechts wissels
-            col_left, col_right = st.columns([1,1])
+            col_left, col_right = st.columns([1,2])
         
+            # -------------------------------------------------
+            # LINKERKOLOM — OPSTELLING (HANDMATIG AANPASBAAR)
+            # -------------------------------------------------
             with col_left:
-                # -------------------------------------------------
-                # FANCY 4‑3‑3 VISUELE OPSTELLING (GEFIXT + MARKDOWN)
-                # -------------------------------------------------
-                speler = schedule[block_name]
+                st.write("**Opstelling aanpassen**")
         
-                sp  = speler["sp"]
-                cv1 = speler["cv1"]
-                cv2 = speler["cv2"]
-                cm1 = speler["cm1"]
-                cm2 = speler["cm2"]
-                cm3 = speler["cm3"]
-                lb  = speler["lb"]
-                rb  = speler["rb"]
-                la  = speler["la"]
-                ra  = speler["ra"]
+                # huidige opstelling
+                current = schedule[block_name]
         
-                def f(n):
-                    return f"{n:^15}"
+                # nieuwe opstelling (mutable)
+                new_positions = {}
         
-                opstelling = f"""
-                                {f(la)}   {f(sp)}   {f(ra)}
+                for pos in POSITIONS_ORDER:
+                    huidige_speler = current[pos]
         
-                                {f(cm1)}   {f(cm2)}   {f(cm3)}
+                    # spelers die nog niet op een andere positie staan
+                    beschikbaar = [
+                        p for p in players
+                        if p not in new_positions.values() and (p == huidige_speler or p not in current.values())
+                    ]
         
-                        {f(lb)}   {f(cv1)}   {f(cv2)}   {f(rb)}
+                    new_positions[pos] = st.selectbox(
+                        f"{pos.upper()}",
+                        options=beschikbaar,
+                        index=beschikbaar.index(huidige_speler),
+                        key=f"{block_name}_{pos}"
+                    )
+        
+                # opstelling opslaan
+                schedule[block_name] = new_positions
+        
+                # ASCII veld
+                def center(n): return f"{n:^15}"
+        
+                sp  = new_positions["sp"]
+                cv1 = new_positions["cv1"]
+                cv2 = new_positions["cv2"]
+                cm1 = new_positions["cm1"]
+                cm2 = new_positions["cm2"]
+                cm3 = new_positions["cm3"]
+                lb  = new_positions["lb"]
+                rb  = new_positions["rb"]
+                la  = new_positions["la"]
+                ra  = new_positions["ra"]
+        
+                ascii_field = f"""
+                                {center(la)}   {center(sp)}   {center(ra)}
+        
+                        {center(cm1)}   {center(cm2)}   {center(cm3)}
+        
+                {center(lb)}   {center(cv1)}   {center(cv2)}   {center(rb)}
                 """
         
-                st.markdown(f"```text\n{opstelling}\n```")
+                st.markdown(f"<pre>{ascii_field}</pre>", unsafe_allow_html=True)
         
+            # -------------------------------------------------
+            # RECHTERKOLOM — WISSELS (DYNAMISCH)
+            # -------------------------------------------------
             with col_right:
-                # -------------------------------------------------
-                # WISSELS
-                # -------------------------------------------------
                 st.write("**Wissels in dit blok**")
+        
+                # spelers die niet in het veld staan
+                erin_options = [p for p in players if p not in new_positions.values()]
+        
+                # spelers die in het veld staan
+                eruit_options = list(new_positions.values())
         
                 erin = st.multiselect(
                     f"Spelers erin in blok {block_name}",
-                    options=players,
+                    options=erin_options,
                     key=f"erin_{block_name}"
                 )
         
                 eruit = st.multiselect(
                     f"Spelers eruit in blok {block_name}",
-                    options=[schedule[block_name][pos] for pos in POSITIONS_ORDER],
+                    options=eruit_options,
                     key=f"eruit_{block_name}"
                 )
         
@@ -433,6 +463,7 @@ else:
                         st.write(f"- minuut {minute}: {txt}")
                 else:
                     st.write("Geen wissels in dit blok.")
+
 
 
         # -------------------------------------------------

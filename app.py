@@ -364,7 +364,7 @@ else:
             st.markdown(f"## Blok {block_idx+1}: {block_name} ({block_min} min)")
 
             # Kolommen: 1/3 links (opstelling), 2/3 rechts (wissels)
-            col_left, col_right = st.columns([1, 2])
+            col_left, col_right = st.columns([1, 4])
 
             # -------------------------------------------------
             # LINKERKOLOM — ASCII 4‑3‑3 OPSTELLING

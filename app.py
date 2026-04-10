@@ -4,10 +4,6 @@ import math
 
 st.set_page_config(layout="wide")
 
-# ===== SESSION STATE =====
-if "custom_schedule" not in st.session_state:
-    st.session_state.custom_schedule = None
-
 # =====================================================
 # SPELERSDATABASE
 # =====================================================
@@ -230,6 +226,110 @@ def generate_schedule(players, targets, priority_flags, blocks):
     return schedule,played
 
 # =====================================================
+# WISSELSPREIDING (geen dubbele Minuut 45; bloknaam aanpassen)
+# =====================================================
+def merge_steps_same_minute(steps):
+    """Combineer meerdere stappen met dezelfde minuut in één stap."""
+    merged = {}
+    for minute, pairs in steps:
+        if minute not in merged:
+            merged[minute] = []
+        merged[minute].extend(pairs)
+    return sorted([(m, merged[m]) for m in sorted(merged.keys())], key=lambda x: x[0])
+
+def spread_substitutions(block_start, block_size, players_in, players_out):
+    """
+    Return: (steps, adjusted_block_start)
+    - steps: list of (minute, [(in,out),...]) met geen duplicate minuten (samengevoegd).
+    - adjusted_block_start: None of nieuwe start minuut (int) wanneer we willen tonen als bijv. 45-...
+    """
+    subs = list(zip(players_in, players_out))
+    n = len(subs)
+
+    # standaard afronden op veelvoud van 5
+    minute = 5 * round(block_start / 5)
+
+    # voorkom wissel precies op minuut 40: verplaats naar 45 (vast)
+    adjusted_block_start = None
+    if minute == 40:
+        minute = 45
+        adjusted_block_start = 45
+
+    # klein blok of weinig wissels: alles in één moment
+    if block_size < 15 or n <= 3:
+        steps = [(minute, subs)]
+        return merge_steps_same_minute(steps), adjusted_block_start
+
+    # anders spreiden in stappen van maximaal 3 wissels per moment
+    max_per_step = 3
+    steps = []
+    i = 0
+    step_offset = 0
+    while i < n:
+        step_in = subs[i:i+max_per_step]
+        step_minute = 5 * round((block_start + 5 * step_offset) / 5)
+        # voorkom dat een stap precies op 40 valt: verplaats naar 45
+        if step_minute == 40:
+            step_minute = 45
+            if step_offset == 0:
+                adjusted_block_start = 45
+        steps.append((step_minute, step_in))
+        i += max_per_step
+        step_offset += 1
+
+    return merge_steps_same_minute(steps), adjusted_block_start
+
+# =====================================================
+# EVALUATIE
+# =====================================================
+def evaluate_blocks(players,training_counts,priority_flags,pattern):
+    blocks = build_blocks_from_pattern(pattern)
+    targets = calculate_target_minutes(players,training_counts)
+    schedule,_ = generate_schedule(players,targets,priority_flags,blocks)
+    if schedule is None:
+        return float('inf'),None,None,None,None
+    mins = defaultdict(float)
+    for b_name,b_min in blocks:
+        for pos,sp in schedule[b_name].items():
+            if sp in players:
+                mins[sp] += b_min
+    total_dev = sum(abs(mins[p] - targets[p]) for p in players)
+    return total_dev,blocks,schedule,targets,mins
+
+# =====================================================
+# BESTE BLOKKEN
+# =====================================================
+def choose_best_blocks(players,training_counts,priority_flags):
+    targets = calculate_target_minutes(players,training_counts)
+    for pat in generate_block_patterns(True):
+        td,bl,sc,tg,mn = evaluate_blocks(players,training_counts,priority_flags,pat)
+        if sc is None:
+            continue
+        devs = [abs(mn[p]-tg[p]) for p in players]
+        md = max(devs)
+        if md <= 9:
+            return bl,sc,tg,mn,True,md,td
+    best_score = float('inf')
+    best = None,None,None,None
+    for pat in generate_block_patterns(False):
+        td,bl,sc,tg,mn = evaluate_blocks(players,training_counts,priority_flags,pat)
+        if sc is None:
+            continue
+        devs = [abs(mn[p]-tg[p]) for p in players]
+        md = max(devs)
+        deviation_cost = sum((max(0,abs(d)-5))**2 for d in devs)
+        big_outliers = sum(1 for d in devs if abs(d)>=10)*20000
+        score = deviation_cost*200 + big_outliers + md*10000
+        if score < best_score:
+            best_score = score
+            best = bl,sc,tg,mn
+            best_md = md
+            best_td = td
+    if best[0] is not None:
+        return *best,False,best_md,best_td
+    return None,None,None,None,None,0,0
+
+# =====================================================
 # OUTPUT
 # =====================================================
 if st.button("Genereer opstellingen"):
@@ -237,16 +337,10 @@ if st.button("Genereer opstellingen"):
         st.error("Minimaal 10 spelers nodig")
     else:
         res = choose_best_blocks(list(selected_players.keys()),training_counts,priority_flags)
-
         if res[0] is None:
             st.error("Geen opstelling gevonden.")
         else:
             blocks,schedule,targets,mins,is_strict,max_dev,total_dev = res
-
-            if st.session_state.custom_schedule is None:
-                st.session_state.custom_schedule = schedule.copy()
-
-            custom_schedule = st.session_state.custom_schedule
 
             st.subheader("Gebruikte blokken")
             st.write(", ".join(f"{n} ({int(m)} min)" for n,m in blocks))
@@ -254,61 +348,134 @@ if st.button("Genereer opstellingen"):
             prev_players = set()
 
             for block_idx,(block_name,block_min) in enumerate(blocks):
+                # bepaal huidige spelers voor dit blok
+                current_players = set()
+                for pos,speler in schedule[block_name].items():
+                    if speler not in ("FOUT",None):
+                        current_players.add(speler)
 
-                st.subheader(f"Blok {block_name} ({int(block_min)} min)")
+                # bepaal wissels (erin/eruit) vroeg zodat we adjusted_block_name kunnen bepalen
+                eruit = sorted(prev_players - current_players)
+                erin  = sorted(current_players - prev_players)
 
-                pos_map = custom_schedule[block_name]
+                # vraag spread_substitutions alleen als er wissels zijn en dit niet het eerste blok
+                adjusted_start = None
+                steps = []
+                if block_idx > 0 and (erin or eruit):
+                    steps, adjusted_start = spread_substitutions(int(block_name.split("-")[0]), block_min, erin, eruit)
+
+                # pas display block name aan als adjusted_start is gezet
+                display_block_name = block_name
+                if adjusted_start is not None:
+                    end_min = int(block_name.split("-")[1])
+                    display_block_name = f"{adjusted_start}-{end_min}"
+
+                st.subheader(f"Blok {display_block_name} ({int(block_min)} min)")
+
+                pos_map = schedule[block_name]
+
+                # --- display-only swap logic: swap LB/RB en LA/RA alleen voor weergave
+                display_map = dict(pos_map)
+                mirror_pairs = [("lb", "rb"), ("la", "ra")]
+                def base(pos):
+                    return pos[:2] if pos.startswith(("cm","cv")) else pos
+                for left, right in mirror_pairs:
+                    p_left = pos_map.get(left)
+                    p_right = pos_map.get(right)
+                    if not p_left or not p_right:
+                        continue
+                    if p_left in (None, "FOUT") or p_right in (None, "FOUT"):
+                        continue
+                    fav_left = PLAYERS.get(p_left, {}).get("favourite", [])
+                    fav_right = PLAYERS.get(p_right, {}).get("favourite", [])
+                    # swap for display only when both players explicitly prefer the other's side
+                    if base(right) in fav_left and base(left) in fav_right:
+                        display_map[left], display_map[right] = p_right, p_left
 
                 def row(d):
-                    cols = st.columns(len(d))
+                    cols = st.columns(20)
                     for i,pos in d.items():
-                        spelers_lijst = list(selected_players.keys())
-                        current = pos_map.get(pos)
-
-                        index = 0
-                        if current in spelers_lijst:
-                            index = spelers_lijst.index(current)
-
-                        new_player = cols[i].selectbox(
-                            pos,
-                            spelers_lijst,
-                            index=index,
-                            key=f"{block_name}_{pos}"
-                        )
-
-                        custom_schedule[block_name][pos] = new_player
+                        cols[i].write(display_map.get(pos,"—"))
 
                 row({0:"lb",3:"sp",6:"rb"})
                 row({0:"cm1",3:"cm2",6:"cm3"})
                 row({0:"la",2:"cv1",4:"cv2",6:"ra"})
 
-            # ===== HERBEREKEN MINUTEN =====
-            mins = defaultdict(float)
-            for b_name, b_min in blocks:
-                for pos, sp in custom_schedule[b_name].items():
-                    mins[sp] += b_min
+                # Wissels tonen (gebruik samengevoegde stappen en geen dubbele Minuut 45)
+                if block_idx > 0:
+                    st.markdown("**Wissels dit blok:**")
+                    if not (erin or eruit):
+                        st.markdown("_Geen wissels dit blok_")
+                    else:
+                        # als we nog geen steps berekend (geen erin/eruit), bereken nu (fallback)
+                        if not steps:
+                            steps, _ = spread_substitutions(int(block_name.split("-")[0]), block_min, erin, eruit)
+                        for minute, pairs in steps:
+                            st.markdown(f"*Minuut {minute}*")
+                            for sp_in, sp_out in pairs:
+                                st.markdown(f"{sp_in} erin --> {sp_out} eruit")
+                else:
+                    st.markdown("_Eerste blok – iedereen erin_")
 
-            # ===== VALIDATIE =====
-            st.subheader("Validatie")
-            for b_name,_ in blocks:
-                spelers = list(custom_schedule[b_name].values())
-                if len(spelers) != len(set(spelers)):
-                    st.error(f"Dubbele speler in blok {b_name}")
+                prev_players = current_players.copy()
 
-            # ===== TABEL =====
             st.header("Minutenoverzicht")
-
             table = []
             for p in selected_players:
+                pd = defaultdict(float)
+                blks = []
+                for i,(bn,bm) in enumerate(blocks,1):
+                    for pos,sp in schedule[bn].items():
+                        if sp == p:
+                            k = pos[:2] if pos.startswith(("cm","cv")) else pos
+                            pd[k] += bm
+                            blks.append(str(i))
                 g = mins[p]
                 r = targets[p]
                 diff = g - r
-
                 table.append({
                     "Speler":p,
+                    "Trainingen":f"{training_counts[p]}x",
                     "Recht op":f"{int(round(r))} min",
                     "Gekregen":f"{int(round(g))} min",
                     "Verschil":f"{int(round(diff))} min",
+                    "Posities":", ".join(f"{k}:{int(round(v))}" for k,v in pd.items()),
+                    "Blokken":", ".join(blks)
+                })
+            table.sort(key=lambda x:(-int(x["Trainingen"][0]),-float(x["Gekregen"].split()[0])))
+            st.table(table)
+
+            # =====================================================
+            # POSITIE-OVERZICHT (Slots/Totaal: slots / aantal geselecteerde spelers die die basispositie kunnen spelen)
+            # =====================================================
+            base_positions = ["sp", "cv", "cm", "lb", "rb", "la", "ra"]
+            slots_per_base = {bp: sum(1 for p in POSITIONS_ORDER if (p[:2] if p.startswith(("cm","cv")) else p) == bp) for bp in base_positions}
+            selected_list = list(selected_players.keys())
+            players_order = list(PLAYERS.keys())
+
+            def ordered_names_from_list(name_list):
+                return ", ".join([p for p in players_order if p in name_list]) if name_list else "—"
+
+            pos_table = []
+            for bp in base_positions:
+                slots = slots_per_base[bp]
+                total_pool = [p for p in selected_list if (bp in PLAYERS.get(p, {}).get("favourite", []) 
+                                                        or bp in PLAYERS.get(p, {}).get("alternative", []) 
+                                                        or bp in PLAYERS.get(p, {}).get("emergency", []))]
+                total_count = len(total_pool)
+                slots_total = f"{slots}/{total_count}"
+                fav_list = [p for p in selected_list if bp in PLAYERS.get(p, {}).get("favourite", [])]
+                alt_list = [p for p in selected_list if bp in PLAYERS.get(p, {}).get("alternative", [])]
+                emg_list = [p for p in selected_list if bp in PLAYERS.get(p, {}).get("emergency", [])]
+                pos_table.append({
+                    "Positie": bp,
+                    "Slots/Totaal": slots_total,
+                    "Favourite (namen)": ordered_names_from_list(fav_list),
+                    "Alternative (namen)": ordered_names_from_list(alt_list),
+                    "Emergency (namen)": ordered_names_from_list(emg_list),
                 })
 
-            st.table(table)
+            pos_table.sort(key=lambda x: (-int(x["Slots/Totaal"].split("/")[0]), -int(x["Slots/Totaal"].split("/")[1]) if x["Slots/Totaal"].split("/")[1].isdigit() else 0))
+
+            st.subheader("Positie overzicht — slots/totaal en voorkeuren (namen in PLAYERS volgorde)")
+            st.table(pos_table)

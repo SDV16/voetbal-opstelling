@@ -479,40 +479,40 @@ if st.button("Genereer opstellingen"):
             table.sort(key=lambda x:(-int(x["Trainingen"][0]),-float(x["Gekregen"].split()[0])))
             st.table(table)
 
-def calculate_real_minutes(blocks, schedule, all_subs):
-    """
-    Berekent echte minuten per speler op basis van wisselmomenten.
-    """
-    player_segments = defaultdict(list)
-
-    for block_name, block_min in blocks:
-        start, end = map(int, block_name.split("-"))
-        block_players = schedule[block_name].copy()
-
-        # beginsegment: iedereen speelt het hele blok
-        active = {p: start for p in block_players.values()}
-
-        # pas wissels toe
-        for minute, pairs in all_subs.get(block_name, []):
-            for sp_in, sp_out in pairs:
-                # speler eruit → segment eindigt
-                if sp_out in active:
-                    player_segments[sp_out].append((active[sp_out], minute))
-                    del active[sp_out]
-
-                # speler erin → segment start
-                active[sp_in] = minute
-
-        # blok eindigt → alle actieve spelers krijgen segment tot einde
-        for p, seg_start in active.items():
-            player_segments[p].append((seg_start, end))
-
-    # bereken totale minuten
-    real_minutes = {}
-    for p, segs in player_segments.items():
-        real_minutes[p] = sum(e - s for s, e in segs)
-
-    return real_minutes, player_segments
+        def calculate_real_minutes(blocks, schedule, all_subs):
+            """
+            Berekent echte minuten per speler op basis van wisselmomenten.
+            """
+            player_segments = defaultdict(list)
+        
+            for block_name, block_min in blocks:
+                start, end = map(int, block_name.split("-"))
+                block_players = schedule[block_name].copy()
+        
+                # beginsegment: iedereen speelt het hele blok
+                active = {p: start for p in block_players.values()}
+        
+                # pas wissels toe
+                for minute, pairs in all_subs.get(block_name, []):
+                    for sp_in, sp_out in pairs:
+                        # speler eruit → segment eindigt
+                        if sp_out in active:
+                            player_segments[sp_out].append((active[sp_out], minute))
+                            del active[sp_out]
+        
+                        # speler erin → segment start
+                        active[sp_in] = minute
+        
+                # blok eindigt → alle actieve spelers krijgen segment tot einde
+                for p, seg_start in active.items():
+                    player_segments[p].append((seg_start, end))
+        
+            # bereken totale minuten
+            real_minutes = {}
+            for p, segs in player_segments.items():
+                real_minutes[p] = sum(e - s for s, e in segs)
+        
+            return real_minutes, player_segments
 
 
 

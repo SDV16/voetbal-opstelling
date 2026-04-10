@@ -160,9 +160,16 @@ def build_blocks_from_pattern(pattern):
     start = 0
     for size in pattern:
         end = start + size
-        blocks.append((f"{int(start)}-{int(end)}",size))
+
+        # --- NIEUWE REGEL: blok mag niet door de rust heen ---
+        if start < 45 < end:
+            return None  # ongeldig patroon
+
+        blocks.append((f"{int(start)}-{int(end)}", size))
         start = end
+
     return blocks
+
 
 # =====================================================
 # GENERATE SCHEDULE

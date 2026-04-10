@@ -388,7 +388,7 @@ else:
                     return f"{n:^15}"
 
                 opstelling = f"""
-                                {f(la)}   {f(sp)}   {f(ra)}
+                        {f(la)}   {f(sp)}   {f(ra)}
 
                         {f(cm1)}   {f(cm2)}   {f(cm3)}
 

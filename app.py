@@ -363,44 +363,43 @@ else:
         for block_idx, (block_name, block_min) in enumerate(blocks):
             st.markdown(f"## Blok {block_idx+1}: {block_name} ({block_min} min)")
         
-            # -------------------------------------------------
-            # FANCY 4‑3‑3 VISUELE OPSTELLING (GEFIXT)
-            # -------------------------------------------------
-
-            speler = schedule[block_name]
-            
-            sp  = speler["sp"]
-            cv1 = speler["cv1"]
-            cv2 = speler["cv2"]
-            cm1 = speler["cm1"]
-            cm2 = speler["cm2"]
-            cm3 = speler["cm3"]
-            lb  = speler["lb"]
-            rb  = speler["rb"]
-            la  = speler["la"]
-            ra  = speler["ra"]
-            
-            # vaste breedte voor elke naam
-            def f(n):
-                return f"{n:^15}"
-            
-            opstelling = f"""
-                  {f(la)}   {f(sp)}   {f(ra)}
-                
-                  {f(cm1)}   {f(cm2)}   {f(cm3)}
-            
-            {f(lb)}   {f(cv1)}   {f(cv2)}   {f(rb)}
-            """
-            
-            st.markdown(f"```text\n{opstelling}\n```")
-
-
-            # -------------------------------------------------
-            # WISSELS
-            # -------------------------------------------------
-            col1, col2 = st.columns(2)
+            # twee kolommen: links opstelling, rechts wissels
+            col_left, col_right = st.columns([2,1])
         
-            with col1:
+            with col_left:
+                # -------------------------------------------------
+                # FANCY 4‑3‑3 VISUELE OPSTELLING (GEFIXT + MARKDOWN)
+                # -------------------------------------------------
+                speler = schedule[block_name]
+        
+                sp  = speler["sp"]
+                cv1 = speler["cv1"]
+                cv2 = speler["cv2"]
+                cm1 = speler["cm1"]
+                cm2 = speler["cm2"]
+                cm3 = speler["cm3"]
+                lb  = speler["lb"]
+                rb  = speler["rb"]
+                la  = speler["la"]
+                ra  = speler["ra"]
+        
+                def f(n):
+                    return f"{n:^15}"
+        
+                opstelling = f"""
+                                        {f(la)}   {f(sp)}   {f(ra)}
+        
+                                {f(cm1)}   {f(cm2)}   {f(cm3)}
+        
+                        {f(lb)}   {f(cv1)}   {f(cv2)}   {f(rb)}
+                """
+        
+                st.markdown(f"```text\n{opstelling}\n```")
+        
+            with col_right:
+                # -------------------------------------------------
+                # WISSELS
+                # -------------------------------------------------
                 st.write("**Wissels in dit blok**")
         
                 erin = st.multiselect(
@@ -415,7 +414,6 @@ else:
                     key=f"eruit_{block_name}"
                 )
         
-            with col2:
                 if block_idx > 0 and (erin or eruit):
                     steps, adjusted_start = spread_substitutions(
                         int(block_name.split("-")[0]),
@@ -435,6 +433,7 @@ else:
                         st.write(f"- minuut {minute}: {txt}")
                 else:
                     st.write("Geen wissels in dit blok.")
+
 
         # -------------------------------------------------
         # MINUTENOVERZICHT (ECHTE MINUTEN + OUDE KOLLOMMEN)

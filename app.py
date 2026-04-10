@@ -380,7 +380,7 @@ else:
             ra  = speler["ra"]
         
             opstelling = f"""
-                              {lb:^15}      {sp:^15}      {rb:^15}
+                                                           {lb:^15}      {sp:^15}      {rb:^15}
         
                         {cm1:^15}      {cm2:^15}      {cm3:^15}
         

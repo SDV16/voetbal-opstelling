@@ -364,7 +364,7 @@ else:
             st.markdown(f"## Blok {block_idx+1}: {block_name} ({block_min} min)")
         
             # twee kolommen: links opstelling, rechts wissels
-            col_left, col_right = st.columns([1,3])
+            col_left, col_right = st.columns([1,2])
         
             with col_left:
             speler = schedule[block_name]
@@ -381,7 +381,7 @@ else:
             ra  = speler["ra"]
         
             def f(n):
-                return f"{n:^10}"
+                return f"{n:^15}"
         
             opstelling = f"""
                     {f(la)}   {f(sp)}   {f(ra)}

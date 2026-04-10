@@ -199,9 +199,9 @@ def generate_schedule(players, targets, priority_flags, blocks):
                     continue
                 if position_rank(p,pos) > 3:
                     continue
-                limit = -10
+                limit = -8
                 if scarcity_bonus(p,pos,players) > 0:
-                    limit = -20
+                    limit = -15
                 if remaining[p] - b_min >= limit:
                     cands.append(p)
             if not cands:

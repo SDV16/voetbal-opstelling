@@ -29,6 +29,7 @@ PLAYERS = {
     "Julius": {"favourite":["cv"], "alternative":[], "emergency":["ra", "la"]},
     "Tobias": {"favourite":["rb", "lb", "sp"], "alternative":[""], "emergency":[]},
     "Nicky": {"favourite":["ra", "la"], "alternative":[], "emergency":[]},
+    "Leon": {"favourite":["cm"], "alternative":[""], "emergency":["lb", "rb"]},
 }
 
 POSITIONS_ORDER = ["sp", "cv1", "cv2", "cm1", "cm2", "cm3", "lb", "rb", "la", "ra"]

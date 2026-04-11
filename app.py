@@ -374,7 +374,7 @@ if st.button("Genereer opstellingen"):
                 # =============================
                 # KOLOMMEN (HIER GEBEURT HET)
                 # =============================
-                col_opstelling, col_wissels = st.columns([2,1])
+                col_opstelling, col_wissels = st.columns([1,1])
             
                 # =============================
                 # LINKS: OPSTELLING

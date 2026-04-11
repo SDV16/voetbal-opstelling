@@ -53,7 +53,7 @@ priority_flags = {}
 max_minutes = {}
 
 for player in PLAYERS:
-    col1, col2, col3 = st.columns([1,1,1])
+    col1, col2, col3 = st.columns([1,2,2])
     with col1:
         selected = st.checkbox(player, key=f"sel_{player}")
     if selected:

@@ -76,10 +76,10 @@ for player in PLAYERS:
                 key=f"max_{player}"
             )
     
-    selected_players[player] = PLAYERS[player]
-    training_counts[player] = trainingen
-    priority_flags[player] = priority
-    max_minutes[player] = max_min
+        selected_players[player] = PLAYERS[player]
+        training_counts[player] = trainingen
+        priority_flags[player] = priority
+        max_minutes[player] = max_min
 
 # =====================================================
 # TARGET MINUTEN

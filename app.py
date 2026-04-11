@@ -410,31 +410,54 @@ if st.button("Genereer opstellingen"):
                         pairs = []
                 
                         if erin and eruit:
+                            max_total = 4
+                            max_per_moment = 2
+                            
+                            base_minute = int(block_name.split("-")[0])
+                            base_minute = 5 * round(base_minute / 5)
+                            
+                            # toegestane momenten: -5, 0, +5
+                            moments = [base_minute - 5, base_minute, base_minute + 5]
+                            
+                            eruit = list(prev_players - current_players)
+                            erin = list(current_players - prev_players)
+                            
+                            eruit = eruit[:max_total]
+                            erin = erin[:max_total]
+                            
                             pair_candidates = sorted(
                                 [(i, o) for i in erin for o in eruit],
-                                key=lambda x: (abs(mins[x[0]] - mins[x[1]]), -mins[x[0]])
+                                key=lambda x: abs(mins[x[0]] - mins[x[1]])
                             )
-                
+                            
                             used_i = set()
                             used_o = set()
-                
+                            
+                            moment_plan = {m: [] for m in moments}
+                            
                             for i, o in pair_candidates:
                                 if i in used_i or o in used_o:
                                     continue
-                                pairs.append((i, o))
-                                used_i.add(i)
-                                used_o.add(o)
-                
-                        if not pairs:
+                            
+                                # zoek moment met ruimte
+                                for m in moments:
+                                    if len(moment_plan[m]) < max_per_moment:
+                                        moment_plan[m].append((i, o))
+                                        used_i.add(i)
+                                        used_o.add(o)
+                                        break
+                                            
+                        total_moves = sum(len(v) for v in moment_plan.values())
+
+                        if all(len(v) == 0 for v in moment_plan.values()):
                             st.markdown("_Geen geldige wissels_")
                         else:
-                            minute = int(block_name.split("-")[0])
-                            minute = 5 * round(minute / 5)
-                
-                            st.markdown(f"**Minuut {minute}**")
-                            for sp_in, sp_out in pairs:
-                                st.markdown(f"{sp_in} → {sp_out}")
-                
+                            for m in moments:
+                                if moment_plan[m]:
+                                    st.markdown(f"**Minuut {m}**")
+                                    for i, o in moment_plan[m]:
+                                        st.markdown(f"{i} → {o}")
+                                        
                 prev_players = current_players.copy()
                 
             st.header("Minutenoverzicht")

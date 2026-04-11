@@ -262,67 +262,6 @@ def generate_schedule(players, targets, priority_flags, blocks):
             played[ch].append((pos, b_min))
 
     return schedule, played
-# =====================================================
-# WISSELSPREIDING (aangepast met jouw verzoek)
-# =====================================================
-def merge_steps_same_minute(steps):
-    """Combineer meerdere stappen met dezelfde minuut in één stap."""
-    merged = {}
-    for minute, pairs in steps:
-        if minute not in merged:
-            merged[minute] = []
-        merged[minute].extend(pairs)
-    return sorted([(m, merged[m]) for m in sorted(merged.keys())], key=lambda x: x[0])
-
-def spread_substitutions(block_start, block_size, players_in, players_out):
-    """
-    Return: (steps, adjusted_block_start)
-    - steps: list of (minute, [(in,out),...]) met geen duplicate minuten (samengevoegd).
-    - adjusted_block_start: None of nieuwe start minuut (int) wanneer we willen tonen als bijv. 45-...
-    """
-    subs = list(zip(players_in, players_out))
-    n = len(subs)
-
-    # === JOUW NIEUWE WENS ===
-    # Max 4 mensen per blok
-    if n > 4:
-        subs = subs[:4]
-        n = 4
-
-    # Max 2 wissels per keer
-    max_per_step = 2
-
-    # standaard afronden op veelvoud van 5
-    minute = 5 * round(block_start / 5)
-
-    # voorkom wissel precies op minuut 40: verplaats naar 45 (vast)
-    adjusted_block_start = None
-    if minute == 40:
-        minute = 45
-        adjusted_block_start = 45
-
-    # klein blok of weinig wissels: alles in één moment
-    if block_size < 15 or n <= max_per_step:
-        steps = [(minute, subs)]
-        return merge_steps_same_minute(steps), adjusted_block_start
-
-    # anders spreiden in stappen van maximaal 2 wissels per moment
-    steps = []
-    i = 0
-    step_offset = 0
-    while i < n:
-        step_in = subs[i:i+max_per_step]
-        step_minute = 5 * round((block_start + 5 * step_offset) / 5)
-        # voorkom dat een stap precies op 40 valt: verplaats naar 45
-        if step_minute == 40:
-            step_minute = 45
-            if step_offset == 0:
-                adjusted_block_start = 45
-        steps.append((step_minute, step_in))
-        i += max_per_step
-        step_offset += 1
-
-    return merge_steps_same_minute(steps), adjusted_block_start
 
 # =====================================================
 # EVALUATIE
@@ -399,25 +338,11 @@ if st.button("Genereer opstellingen"):
                 for pos,speler in schedule[block_name].items():
                     if speler not in ("FOUT",None):
                         current_players.add(speler)
-            
-                eruit = sorted(prev_players - current_players)
-                erin = sorted(current_players - prev_players)
-            
-                adjusted_start = None
-                steps = []
-            
-                if block_idx > 0 and (erin or eruit):
-                    steps, adjusted_start = spread_substitutions(
-                        int(block_name.split("-")[0]),
-                        block_min,
-                        erin,
-                        eruit
-                    )
-            
+                
+                eruit = list(prev_players - current_players)
+                erin = list(current_players - prev_players)
+                
                 display_block_name = block_name
-                if adjusted_start is not None:
-                    end_min = int(block_name.split("-")[1])
-                    display_block_name = f"{adjusted_start}-{end_min}"
             
                 # =============================
                 # KOLOMMEN (HIER GEBEURT HET)
@@ -465,28 +390,51 @@ if st.button("Genereer opstellingen"):
                 # =============================
                 # RECHTS: WISSELS
                 # =============================
+                eruit = sorted(prev_players - current_players)
+                erin = sorted(current_players - prev_players)
+                
+                max_total = 4
+                eruit = eruit[:max_total]
+                erin = erin[:max_total]
+                
                 with col_wissels:
                     st.subheader("Wissels")
-            
+                
                     if block_idx == 0:
                         st.markdown("_Eerste blok – iedereen erin_")
+                
+                    elif not erin and not eruit:
+                        st.markdown("_Geen wissels_")
+                
                     else:
-                        if not (erin or eruit):
-                            st.markdown("_Geen wissels_")
+                        pairs = []
+                
+                        if erin and eruit:
+                            pair_candidates = sorted(
+                                [(i, o) for i in erin for o in eruit],
+                                key=lambda x: (abs(mins[x[0]] - mins[x[1]]), -mins[x[0]])
+                            )
+                
+                            used_i = set()
+                            used_o = set()
+                
+                            for i, o in pair_candidates:
+                                if i in used_i or o in used_o:
+                                    continue
+                                pairs.append((i, o))
+                                used_i.add(i)
+                                used_o.add(o)
+                
+                        if not pairs:
+                            st.markdown("_Geen geldige wissels_")
                         else:
-                            if not steps:
-                                steps, _ = spread_substitutions(
-                                    int(block_name.split("-")[0]),
-                                    block_min,
-                                    erin,
-                                    eruit
-                                )
-            
-                            for minute, pairs in steps:
-                                st.markdown(f"**Minuut {minute}**")
-                                for sp_in, sp_out in pairs:
-                                    st.markdown(f"{sp_in} → {sp_out}")
-            
+                            minute = int(block_name.split("-")[0])
+                            minute = 5 * round(minute / 5)
+                
+                            st.markdown(f"**Minuut {minute}**")
+                            for sp_in, sp_out in pairs:
+                                st.markdown(f"{sp_in} → {sp_out}")
+                
                 prev_players = current_players.copy()
                 
             st.header("Minutenoverzicht")

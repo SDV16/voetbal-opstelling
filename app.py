@@ -101,12 +101,12 @@ def calculate_target_minutes(players, training_counts, max_minutes):
     redistribute = total_removed / n if n>0 else 0
     final = {}
     for p in players:
-    candidate = raw[p] + redistribute
-
-    # max cap toepassen
-    capped = min(candidate, max_minutes.get(p, 90), 90)
-
-    final[p] = 5 * round(capped / 5)
+        candidate = raw[p] + redistribute
+    
+        # max cap toepassen
+        capped = min(candidate, max_minutes.get(p, 90), 90)
+    
+        final[p] = 5 * round(capped / 5)
     return final
 
 # =====================================================

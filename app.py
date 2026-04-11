@@ -28,7 +28,7 @@ PLAYERS = {
     "Chris": {"favourite":["ra"], "alternative":["sp", "cv"], "emergency":["la", "rb", "lb"]},
     "Julius": {"favourite":["cv"], "alternative":[], "emergency":["ra", "la"]},
     "Tobias": {"favourite":["rb", "lb", "sp"], "alternative":[""], "emergency":[]},
-    "Nicky": {"favourite":["ra", "la"], "alternative":[], "emergency":[]},
+    "Nicky": {"favourite":["ra", "la"], "alternative":[], "emergency":["cv"]},
     "Leon": {"favourite":["cm"], "alternative":[""], "emergency":["lb", "rb"]},
 }
 

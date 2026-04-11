@@ -406,7 +406,7 @@ if st.button("Genereer opstellingen"):
                             display_map[left], display_map[right] = p_right, p_left
             
                     def row(d):
-                        cols = st.columns(20)
+                        cols = st.columns(7)
                         for i,pos in d.items():
                             cols[i].write(display_map.get(pos,"—"))
             

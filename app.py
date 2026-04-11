@@ -344,63 +344,102 @@ if st.button("Genereer opstellingen"):
             st.write(", ".join(f"{n} ({int(m)} min)" for n,m in blocks))
             prev_players = set()
             for block_idx,(block_name,block_min) in enumerate(blocks):
-                # bepaal huidige spelers voor dit blok
+                # =============================
+                # VOORBEREIDING
+                # =============================
                 current_players = set()
                 for pos,speler in schedule[block_name].items():
                     if speler not in ("FOUT",None):
                         current_players.add(speler)
-                # bepaal wissels (erin/eruit) vroeg zodat we adjusted_block_name kunnen bepalen
+            
                 eruit = sorted(prev_players - current_players)
                 erin = sorted(current_players - prev_players)
-                # vraag spread_substitutions alleen als er wissels zijn en dit niet het eerste blok
+            
                 adjusted_start = None
                 steps = []
+            
                 if block_idx > 0 and (erin or eruit):
-                    steps, adjusted_start = spread_substitutions(int(block_name.split("-")[0]), block_min, erin, eruit)
-                # pas display block name aan als adjusted_start is gezet
+                    steps, adjusted_start = spread_substitutions(
+                        int(block_name.split("-")[0]),
+                        block_min,
+                        erin,
+                        eruit
+                    )
+            
                 display_block_name = block_name
                 if adjusted_start is not None:
                     end_min = int(block_name.split("-")[1])
                     display_block_name = f"{adjusted_start}-{end_min}"
-                st.subheader(f"Blok {display_block_name} ({int(block_min)} min)")
-                pos_map = schedule[block_name]
-                # --- display-only swap logic: swap LB/RB en LA/RA alleen voor weergave
-                display_map = dict(pos_map)
-                mirror_pairs = [("lb", "rb"), ("la", "ra")]
-                def base(pos):
-                    return pos[:2] if pos.startswith(("cm","cv")) else pos
-                for left, right in mirror_pairs:
-                    p_left = pos_map.get(left)
-                    p_right = pos_map.get(right)
-                    if not p_left or not p_right:
-                        continue
-                    if p_left in (None, "FOUT") or p_right in (None, "FOUT"):
-                        continue
-                    fav_left = PLAYERS.get(p_left, {}).get("favourite", [])
-                    fav_right = PLAYERS.get(p_right, {}).get("favourite", [])
-                    # swap for display only when both players explicitly prefer the other's side
-                    if base(right) in fav_left and base(left) in fav_right:
-                        display_map[left], display_map[right] = p_right, p_left
-                def row(d):
-                    cols = st.columns(20)
-                    for i,pos in d.items():
-                        cols[i].write(display_map.get(pos,"—"))
-                row({0:"lb",3:"sp",6:"rb"})
-                row({0:"cm1",3:"cm2",6:"cm3"})
-                row({0:"la",2:"cv1",4:"cv2",6:"ra"})
-                # Wissels tonen (gebruik samengevoegde stappen en geen dubbele Minuut 45)
-                if block_idx > 0:
-                    st.markdown("**Wissels dit blok:**")
-                    if not (erin or eruit):
-                        st.markdown("_Geen wissels dit blok_")
+            
+                # =============================
+                # KOLOMMEN (HIER GEBEURT HET)
+                # =============================
+                col_opstelling, col_wissels = st.columns([2,1])
+            
+                # =============================
+                # LINKS: OPSTELLING
+                # =============================
+                with col_opstelling:
+                    st.subheader(f"Blok {display_block_name} ({int(block_min)} min)")
+            
+                    pos_map = schedule[block_name]
+            
+                    display_map = dict(pos_map)
+                    mirror_pairs = [("lb", "rb"), ("la", "ra")]
+            
+                    def base(pos):
+                        return pos[:2] if pos.startswith(("cm","cv")) else pos
+            
+                    for left, right in mirror_pairs:
+                        p_left = pos_map.get(left)
+                        p_right = pos_map.get(right)
+            
+                        if not p_left or not p_right:
+                            continue
+                        if p_left in (None, "FOUT") or p_right in (None, "FOUT"):
+                            continue
+            
+                        fav_left = PLAYERS.get(p_left, {}).get("favourite", [])
+                        fav_right = PLAYERS.get(p_right, {}).get("favourite", [])
+            
+                        if base(right) in fav_left and base(left) in fav_right:
+                            display_map[left], display_map[right] = p_right, p_left
+            
+                    def row(d):
+                        cols = st.columns(20)
+                        for i,pos in d.items():
+                            cols[i].write(display_map.get(pos,"—"))
+            
+                    row({0:"lb",3:"sp",6:"rb"})
+                    row({0:"cm1",3:"cm2",6:"cm3"})
+                    row({0:"la",2:"cv1",4:"cv2",6:"ra"})
+            
+                # =============================
+                # RECHTS: WISSELS
+                # =============================
+                with col_wissels:
+                    st.subheader("Wissels")
+            
+                    if block_idx == 0:
+                        st.markdown("_Eerste blok – iedereen erin_")
                     else:
-                        # als we nog geen steps berekend (geen erin/eruit), bereken nu (fallback)
-                        if not steps:
-                            steps, _ = spread_substitutions(int(block_name.split("-")[0]), block_min, erin, eruit)
-                        for minute, pairs in steps:
-                            st.markdown(f"*Minuut {minute}*")
-                            for sp_in, sp_out in pairs:
-                                st.markdown(f"{sp_in} erin --> {sp_out} eruit")
+                        if not (erin or eruit):
+                            st.markdown("_Geen wissels_")
+                        else:
+                            if not steps:
+                                steps, _ = spread_substitutions(
+                                    int(block_name.split("-")[0]),
+                                    block_min,
+                                    erin,
+                                    eruit
+                                )
+            
+                            for minute, pairs in steps:
+                                st.markdown(f"**Minuut {minute}**")
+                                for sp_in, sp_out in pairs:
+                                    st.markdown(f"{sp_in} → {sp_out}")
+            
+                prev_players = current_players.copy()
                 else:
                     st.markdown("_Eerste blok – iedereen erin_")
                 prev_players = current_players.copy()

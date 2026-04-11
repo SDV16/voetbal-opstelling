@@ -439,7 +439,8 @@ if st.button("Genereer opstellingen"):
                                 for sp_in, sp_out in pairs:
                                     st.markdown(f"{sp_in} → {sp_out}")
             
-                prev_players = current_players.copy()
+                    prev_players = current_players.copy()
+                
                 else:
                     st.markdown("_Eerste blok – iedereen erin_")
                 prev_players = current_players.copy()

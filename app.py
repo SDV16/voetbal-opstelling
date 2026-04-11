@@ -50,6 +50,7 @@ st.header("Selecteer spelers")
 selected_players = {}
 training_counts = {}
 priority_flags = {}
+max_minutes = {}
 
 for player in PLAYERS:
     col1, col2, col3 = st.columns([2,3,2])
@@ -66,14 +67,24 @@ for player in PLAYERS:
             )
         with col3:
             priority = st.checkbox("Voorrang", key=f"prio_{player}")
-        selected_players[player] = PLAYERS[player]
-        training_counts[player] = trainingen
-        priority_flags[player] = priority
+            max_min = st.number_input(
+                "Max min",
+                min_value=0,
+                max_value=90,
+                value=90,
+                step=5,
+                key=f"max_{player}"
+            )
+    
+    selected_players[player] = PLAYERS[player]
+    training_counts[player] = trainingen
+    priority_flags[player] = priority
+    max_minutes[player] = max_min
 
 # =====================================================
 # TARGET MINUTEN
 # =====================================================
-def calculate_target_minutes(players, training_counts):
+def calculate_target_minutes(players, training_counts, max_minutes):
     n = len(players)
     base = TOTAL_FIELD_MINUTES / n
     raw = {}
@@ -90,9 +101,12 @@ def calculate_target_minutes(players, training_counts):
     redistribute = total_removed / n if n>0 else 0
     final = {}
     for p in players:
-        candidate = raw[p] + redistribute
-        final[p] = min(candidate, 90)
-        final[p] = 5 * round(final[p] / 5)
+    candidate = raw[p] + redistribute
+
+    # max cap toepassen
+    capped = min(candidate, max_minutes.get(p, 90), 90)
+
+    final[p] = 5 * round(capped / 5)
     return final
 
 # =====================================================
@@ -279,11 +293,11 @@ def spread_substitutions(block_start, block_size, players_in, players_out):
 # =====================================================
 # EVALUATIE
 # =====================================================
-def evaluate_blocks(players,training_counts,priority_flags,pattern):
+def evaluate_blocks(players, training_counts, priority_flags, pattern, max_minutes):
     blocks = build_blocks_from_pattern(pattern)
     if blocks is None:
         return float('inf'), None, None, None, None
-    targets = calculate_target_minutes(players,training_counts)
+    targets = calculate_target_minutes(players, training_counts, max_minutes)
     schedule,_ = generate_schedule(players,targets,priority_flags,blocks)
     if schedule is None:
         return float('inf'),None,None,None,None
@@ -298,8 +312,8 @@ def evaluate_blocks(players,training_counts,priority_flags,pattern):
 # =====================================================
 # BESTE BLOKKEN
 # =====================================================
-def choose_best_blocks(players,training_counts,priority_flags):
-    targets = calculate_target_minutes(players,training_counts)
+def choose_best_blocks(players, training_counts, priority_flags, max_minutes):
+    targets = calculate_target_minutes(players, training_counts, max_minutes)
     for pat in generate_block_patterns(True):
         td,bl,sc,tg,mn = evaluate_blocks(players,training_counts,priority_flags,pat)
         if sc is None:
@@ -335,7 +349,7 @@ if st.button("Genereer opstellingen"):
     if len(selected_players) < 10:
         st.error("Minimaal 10 spelers nodig")
     else:
-        res = choose_best_blocks(list(selected_players.keys()),training_counts,priority_flags)
+        res = choose_best_blocks(list(selected_players.keys()),training_counts,priority_flags,max_minutes)
         if res[0] is None:
             st.error("Geen opstelling gevonden.")
         else:

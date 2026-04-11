@@ -410,7 +410,7 @@ if st.button("Genereer opstellingen"):
                 # =============================
                 # RECHTS: WISSELS (NIEUW MODEL)
                 # =============================
-                
+
                 eruit_raw = list(prev_players - current_players)
                 erin_raw = list(current_players - prev_players)
                 
@@ -422,78 +422,74 @@ if st.button("Genereer opstellingen"):
                 
                     if block_idx == 0:
                         st.markdown("_Eerste blok – iedereen erin_")
+                        prev_players = current_players.copy()
+                        continue
                 
+                    # 1. bepaal echte positie mapping van huidige blok
+                    pos_map = schedule[block_name]
+                
+                    # 2. build positie-index (speler → posities)
+                    player_pos = {}
+                    for pos, sp in pos_map.items():
+                        player_pos.setdefault(sp, []).append(pos[:2])
+                
+                    # 3. score wissels op positie-overlap
+                    def pos_score(i, o):
+                        ip = set(player_pos.get(i, []))
+                        op = set(player_pos.get(o, []))
+                
+                        if ip & op:
+                            return 0  # perfecte match
+                
+                        # fallback: penalty maar toegestaan
+                        return 1
+                
+                    pairs = []
+                    used_i = set()
+                    used_o = set()
+                
+                    MAX_TOTAL = 4
+                
+                    candidates = sorted(
+                        [(i, o, pos_score(i, o)) for i in erin for o in eruit],
+                        key=lambda x: (x[2], abs(mins[x[0]] - mins[x[1]]))
+                    )
+                
+                    for i, o, _ in candidates:
+                        if len(pairs) >= MAX_TOTAL:
+                            break
+                        if i in used_i or o in used_o:
+                            continue
+                
+                        pairs.append((i, o))
+                        used_i.add(i)
+                        used_o.add(o)
+                
+                    if not pairs:
+                        st.markdown("_Geen logische wissels mogelijk_")
                     else:
-                        moments = 3
+                        # tijdsverdeling
                         base_minute = int(block_name.split("-")[0])
                         base_minute = 5 * round(base_minute / 5)
                 
                         time_slots = [base_minute - 5, base_minute, base_minute + 5]
                 
-                        # build weighted edges
-                        edges = []
-                
-                        for i in erin:
-                            for o in eruit:
-                                if compatible(i, o):
-                                    weight = abs(mins[i] - mins[o])
-                
-                                    # bonus: zelfde positie voorkeur = betere match
-                                    shared_positions = set(
-                                        PLAYERS[i]["favourite"] + PLAYERS[i]["alternative"]
-                                    ) & set(
-                                        PLAYERS[o]["favourite"] + PLAYERS[o]["alternative"]
-                                    )
-                
-                                    bonus = -10 * len(shared_positions)
-                
-                                    edges.append((weight + bonus, i, o))
-                
-                        edges.sort()
-                
                         moment_plan = {m: [] for m in time_slots}
-                        used_i = set()
-                        used_o = set()
+                        used = 0
                 
-                        MAX_TOTAL = 4
-                        MAX_PER_MOMENT = 2
-                        
-                        moment_plan = {m: [] for m in time_slots}
-                        used_i = set()
-                        used_o = set()
-                        total_assigned = 0
-                        
-                        for w, i, o in edges:
-                            if total_assigned >= MAX_TOTAL:
-                                break
-                        
-                            if i in used_i or o in used_o:
-                                continue
-                        
-                            placed = False
-                        
+                        for i, o in pairs:
                             for m in time_slots:
-                                if len(moment_plan[m]) < MAX_PER_MOMENT:
+                                if len(moment_plan[m]) < 2:
                                     moment_plan[m].append((i, o))
-                                    used_i.add(i)
-                                    used_o.add(o)
-                                    total_assigned += 1
-                                    placed = True
                                     break
-                        
-                            if not placed:
-                                continue
-                                        
-                        total = sum(len(v) for v in moment_plan.values())
                 
-                        if total == 0:
-                            st.markdown("_Geen logische wissels mogelijk_")
-                        else:
-                            for m in time_slots:
-                                if moment_plan[m]:
-                                    st.markdown(f"**Minuut {m}**")
-                                    for i, o in moment_plan[m]:
-                                        st.markdown(f"{i} → {o}")
+                        for m in time_slots:
+                            if moment_plan[m]:
+                                st.markdown(f"**Minuut {m}**")
+                                for i, o in moment_plan[m]:
+                                    st.markdown(f"{i} → {o}")
+                
+                    prev_players = current_players.copy()
                 
             st.header("Minutenoverzicht")
             table = []

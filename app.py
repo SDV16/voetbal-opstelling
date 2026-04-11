@@ -293,7 +293,7 @@ def spread_substitutions(block_start, block_size, players_in, players_out):
 # =====================================================
 # EVALUATIE
 # =====================================================
-def evaluate_blocks(players, training_counts, priority_flags, pattern, max_minutes):
+def evaluate_blocks(players,training_counts,priority_flags,pattern, max_minutes):
     blocks = build_blocks_from_pattern(pattern)
     if blocks is None:
         return float('inf'), None, None, None, None
@@ -315,7 +315,7 @@ def evaluate_blocks(players, training_counts, priority_flags, pattern, max_minut
 def choose_best_blocks(players, training_counts, priority_flags, max_minutes):
     targets = calculate_target_minutes(players, training_counts, max_minutes)
     for pat in generate_block_patterns(True):
-        td,bl,sc,tg,mn = evaluate_blocks(players,training_counts,priority_flags,pat)
+        td,bl,sc,tg,mn = evaluate_blocks(players,training_counts,priority_flags,pat, max_minutes)
         if sc is None:
             continue
         devs = [abs(mn[p]-tg[p]) for p in players]
@@ -325,7 +325,7 @@ def choose_best_blocks(players, training_counts, priority_flags, max_minutes):
     best_score = float('inf')
     best = None,None,None,None
     for pat in generate_block_patterns(False):
-        td,bl,sc,tg,mn = evaluate_blocks(players,training_counts,priority_flags,pat)
+        td,bl,sc,tg,mn = evaluate_blocks(players,training_counts,priority_flags,pat, max_minutes)
         if sc is None:
             continue
         devs = [abs(mn[p]-tg[p]) for p in players]

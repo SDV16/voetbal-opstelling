@@ -181,6 +181,9 @@ def generate_schedule(players, targets, priority_flags, blocks):
     schedule = {}
     played = defaultdict(list)
 
+    # houdt bij hoeveel minuten iemand al heeft gekregen
+    assigned_minutes = defaultdict(int)
+
     for b_name, b_min in blocks:
         schedule[b_name] = {}
         used = set()
@@ -201,7 +204,7 @@ def generate_schedule(players, targets, priority_flags, blocks):
                 if rank == 999:
                     continue
 
-                # harde limiter op minuten
+                # basis haalbaarheid
                 if remaining[p] - b_min < -10:
                     continue
 
@@ -213,19 +216,26 @@ def generate_schedule(players, targets, priority_flags, blocks):
             def score(p):
                 rank = position_rank(p, pos)
 
-                # prioriteit (klein effect)
-                prio = -5 if priority_flags.get(p, False) else 0
-
-                # schaarste bonus (jouw bestaande logica)
-                scarcity = -scarcity_bonus(p, pos, players)
-
-                # remaining minuten (belangrijkste)
+                # remaining minuten (hoe hoger tekort, hoe eerder kiezen)
                 rem = -remaining[p]
 
-                # HARD ranking gewicht
+                # prioriteit
+                prio = -5 if priority_flags.get(p, False) else 0
+
+                # schaarste (jouw bestaande functie)
+                scarcity = -scarcity_bonus(p, pos, players)
+
+                # ranking penalty (favourite / alt / emergency)
                 rank_penalty = rank * 500
 
-                return rem + rank_penalty + scarcity + prio
+                # ==============================
+                # NIEUW: under-target correctie
+                # ==============================
+                under_target = max(0, targets[p] - assigned_minutes[p])
+
+                under_target_bonus = -under_target * 2
+
+                return rem + rank_penalty + scarcity + prio + under_target_bonus
 
             cands.sort(key=score)
 
@@ -244,8 +254,10 @@ def generate_schedule(players, targets, priority_flags, blocks):
         if not assign(0):
             return None, None
 
+        # update administratie
         for pos in POSITIONS_ORDER:
             ch = schedule[b_name][pos]
+            assigned_minutes[ch] += b_min
             remaining[ch] -= b_min
             played[ch].append((pos, b_min))
 

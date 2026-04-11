@@ -180,54 +180,76 @@ def generate_schedule(players, targets, priority_flags, blocks):
     remaining = targets.copy()
     schedule = {}
     played = defaultdict(list)
-    def tiebreak(p,cands):
-        if all(remaining[x] == remaining[p] for x in cands):
-            return 1 if priority_flags.get(p,False) else 0
-        return 0
-    for b_name,b_min in blocks:
+
+    for b_name, b_min in blocks:
         schedule[b_name] = {}
         used = set()
+
         def assign(idx):
             if idx == len(POSITIONS_ORDER):
                 return True
+
             pos = POSITIONS_ORDER[idx]
+            base_pos = pos[:2] if pos.startswith(("cm","cv")) else pos
+
             cands = []
             for p in players:
                 if p in used:
                     continue
-                if position_rank(p,pos) > 3:
+
+                rank = position_rank(p, pos)
+                if rank == 999:
                     continue
-                limit = -10
-                if scarcity_bonus(p,pos,players) > 0:
-                    limit = -15
-                if remaining[p] - b_min >= limit:
-                    cands.append(p)
+
+                # harde limiter op minuten
+                if remaining[p] - b_min < -10:
+                    continue
+
+                cands.append(p)
+
             if not cands:
                 return False
-            cands.sort(
-                key=lambda p:(
-                    -remaining[p],
-                    position_rank(p,pos),
-                    -scarcity_bonus(p,pos,players),
-                    -tiebreak(p,cands)
-                )
-            )
+
+            def score(p):
+                rank = position_rank(p, pos)
+
+                # prioriteit (klein effect)
+                prio = -5 if priority_flags.get(p, False) else 0
+
+                # schaarste bonus (jouw bestaande logica)
+                scarcity = -scarcity_bonus(p, pos, players)
+
+                # remaining minuten (belangrijkste)
+                rem = -remaining[p]
+
+                # HARD ranking gewicht
+                rank_penalty = rank * 500
+
+                return rem + rank_penalty + scarcity + prio
+
+            cands.sort(key=score)
+
             for ch in cands:
                 schedule[b_name][pos] = ch
                 used.add(ch)
-                if assign(idx+1):
+
+                if assign(idx + 1):
                     return True
+
                 used.remove(ch)
                 del schedule[b_name][pos]
+
             return False
+
         if not assign(0):
-            return None,None
+            return None, None
+
         for pos in POSITIONS_ORDER:
             ch = schedule[b_name][pos]
             remaining[ch] -= b_min
-            played[ch].append((pos,b_min))
-    return schedule,played
+            played[ch].append((pos, b_min))
 
+    return schedule, played
 # =====================================================
 # WISSELSPREIDING (aangepast met jouw verzoek)
 # =====================================================

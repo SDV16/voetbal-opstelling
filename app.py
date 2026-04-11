@@ -326,22 +326,28 @@ if st.button("Genereer opstellingen"):
         if res[0] is None:
             st.error("Geen opstelling gevonden.")
         else:
-            blocks,schedule,targets,mins,is_strict,max_dev,total_dev = res
+            blocks, schedule, targets, mins, is_strict, max_dev, total_dev = res
+
             st.subheader("Gebruikte blokken")
-            st.write(", ".join(f"{n} ({int(m)} min)" for n,m in blocks))
+            st.write(", ".join(f"{n} ({int(m)} min)" for n, m in blocks))
+            
             prev_players = set()
-            for block_idx,(block_name,block_min) in enumerate(blocks):
+            
+            for block_idx, (block_name, block_min) in enumerate(blocks):
+            
                 # =============================
                 # VOORBEREIDING
                 # =============================
-                current_players = set()
-                for pos,speler in schedule[block_name].items():
-                    if speler not in ("FOUT",None):
-                        current_players.add(speler)
-                
-                eruit = list(prev_players - current_players)
-                erin = list(current_players - prev_players)
-                
+                current_players = set(
+                    speler
+                    for pos, speler in schedule[block_name].items()
+                    if speler not in ("FOUT", None)
+                )
+            
+                # RAW diff (GEEN limiet hier)
+                eruit = sorted(prev_players - current_players)
+                erin = sorted(current_players - prev_players)
+            
                 display_block_name = block_name
             
                 # =============================
@@ -390,15 +396,15 @@ if st.button("Genereer opstellingen"):
                 # =============================
                 # RECHTS: WISSELS
                 # =============================
-                eruit = sorted(prev_players - current_players)
-                erin = sorted(current_players - prev_players)
-                
-                max_total = 4
-                eruit = eruit[:max_total]
-                erin = erin[:max_total]
                 
                 with col_wissels:
                     st.subheader("Wissels")
+                
+                    # basis verschil berekening (1x)
+                    eruit = sorted(prev_players - current_players)[:4]
+                    erin = sorted(current_players - prev_players)[:4]
+                
+                    pairs = []
                 
                     if block_idx == 0:
                         st.markdown("_Eerste blok – iedereen erin_")
@@ -407,58 +413,59 @@ if st.button("Genereer opstellingen"):
                         st.markdown("_Geen wissels_")
                 
                     else:
-                        pairs = []
+                        max_total = 4
+                        max_per_moment = 2
                 
-                        if erin and eruit:
-                            max_total = 4
-                            max_per_moment = 2
-                            
-                            base_minute = int(block_name.split("-")[0])
-                            base_minute = 5 * round(base_minute / 5)
-                            
-                            # toegestane momenten: -5, 0, +5
-                            moments = [base_minute - 5, base_minute, base_minute + 5]
-                            
-                            eruit = list(prev_players - current_players)
-                            erin = list(current_players - prev_players)
-                            
-                            eruit = eruit[:max_total]
-                            erin = erin[:max_total]
-                            
-                            pair_candidates = sorted(
-                                [(i, o) for i in erin for o in eruit],
-                                key=lambda x: abs(mins[x[0]] - mins[x[1]])
-                            )
-                            
-                            used_i = set()
-                            used_o = set()
-                            
-                            moment_plan = {m: [] for m in moments}
-                            
-                            for i, o in pair_candidates:
-                                if i in used_i or o in used_o:
-                                    continue
-                            
-                                # zoek moment met ruimte
-                                for m in moments:
-                                    if len(moment_plan[m]) < max_per_moment:
-                                        moment_plan[m].append((i, o))
-                                        used_i.add(i)
-                                        used_o.add(o)
-                                        break
-                                            
-                        total_moves = sum(len(v) for v in moment_plan.values())
-
+                        assigned_total = 0
+                
+                        # blokstart → moment referentie
+                        base_minute = int(block_name.split("-")[0])
+                        base_minute = 5 * round(base_minute / 5)
+                
+                        moments = [base_minute - 5, base_minute, base_minute + 5]
+                        moments = [m for m in moments if m >= 0]
+                
+                        moment_plan = {m: [] for m in moments}
+                
+                        # kandidaten sorteren op minutenbalans
+                        pair_candidates = sorted(
+                            [(i, o) for i in erin for o in eruit],
+                            key=lambda x: abs(mins[x[0]] - mins[x[1]])
+                        )
+                
+                        used_i = set()
+                        used_o = set()
+                
+                        for i, o in pair_candidates:
+                            if assigned_total >= max_total:
+                                break
+                
+                            if i in used_i or o in used_o:
+                                continue
+                
+                            placed = False
+                
+                            for m in moments:
+                                if len(moment_plan[m]) < max_per_moment:
+                                    moment_plan[m].append((i, o))
+                                    used_i.add(i)
+                                    used_o.add(o)
+                                    assigned_total += 1
+                                    placed = True
+                                    break
+                
+                            if not placed:
+                                continue
+                
+                        # output
                         if all(len(v) == 0 for v in moment_plan.values()):
                             st.markdown("_Geen geldige wissels_")
                         else:
-                            for m in moments:
+                            for m in sorted(moment_plan.keys()):
                                 if moment_plan[m]:
                                     st.markdown(f"**Minuut {m}**")
                                     for i, o in moment_plan[m]:
                                         st.markdown(f"{i} → {o}")
-                                        
-                prev_players = current_players.copy()
                 
             st.header("Minutenoverzicht")
             table = []

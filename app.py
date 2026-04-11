@@ -13,7 +13,7 @@ PLAYERS = {
     "Wout": {"favourite":["rb"], "alternative":["lb"], "emergency":["sp"]},
     "Jaimy": {"favourite":["sp"], "alternative":["lb","rb"], "emergency":[]},
     "Sjoerd": {"favourite":["cm", "sp"], "alternative":[], "emergency":[]},
-    "Pelle": {"favourite":["sp"], "alternative":["cm", "lb"], "emergency":["rb"]},
+    "Pelle": {"favourite":["sp", "rb"], "alternative":["cm", "lb"], "emergency":[]},
     "Tim": {"favourite":["sp"], "alternative":["cm"], "emergency":[]},
     "Steijn": {"favourite":["cm"], "alternative":[], "emergency":["sp"]},
     "Jorra": {"favourite":["cm"], "alternative":[], "emergency":[]},

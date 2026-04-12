@@ -74,19 +74,26 @@ for player in PLAYERS:
             )
 
         with col3:
-            priority = st.checkbox("Voorrang", key=f"prio_{player}")
-
-            first_half_only = st.checkbox("1e helft", key=f"fh_{player}")
-            second_half_only = st.checkbox("2e helft", key=f"sh_{player}")
-
-            max_min = st.number_input(
-                "Max min",
-                min_value=0,
-                max_value=90,
-                value=90,
-                step=5,
-                key=f"max_{player}"
-            )
+            c1, c2, c3, c4 = st.columns(4)
+        
+            with c1:
+                priority = st.checkbox("V", key=f"prio_{player}")
+        
+            with c2:
+                first_half_only = st.checkbox("1H", key=f"fh_{player}")
+        
+            with c3:
+                second_half_only = st.checkbox("2H", key=f"sh_{player}")
+        
+            with c4:
+                max_min = st.number_input(
+                    "Max",
+                    min_value=0,
+                    max_value=90,
+                    value=90,
+                    step=5,
+                    key=f"max_{player}"
+                )
 
         selected_players[player] = PLAYERS[player]
         training_counts[player] = trainingen

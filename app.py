@@ -107,6 +107,7 @@ for player in PLAYERS:
         
 def allowed_in_block(player, block_name, availability_flags):
     start = int(block_name.split("-")[0])
+    is_first_half = start < 45
 
     fh = availability_flags[player]["first"]
     sh = availability_flags[player]["second"]
@@ -152,7 +153,7 @@ def calculate_target_minutes(players, training_counts, max_minutes):
         capped = min(candidate, cap)
         
         # NOOIT afronden hier
-        final[p] = capped
+        final[p] = round(capped)
     return final
 
 # =====================================================
@@ -254,7 +255,7 @@ def generate_schedule(players, targets, priority_flags, blocks):
                 if rank == 999:
                     continue
             
-                if remaining[p] - b_min < -10:
+                if assigned_minutes[p] + b_min > max_minutes.get(p, 90):
                     continue
             
                 cands.append(p)
@@ -288,15 +289,20 @@ def generate_schedule(players, targets, priority_flags, blocks):
 
             cands.sort(key=score)
 
-            for ch in cands:
-                schedule[b_name][pos] = ch
-                used.add(ch)
-
-                if assign(idx + 1):
-                    return True
-
-                used.remove(ch)
-                del schedule[b_name][pos]
+            schedule[b_name][pos] = ch
+            used.add(ch)
+            
+            assigned_minutes[ch] += b_min
+            remaining[ch] -= b_min
+            
+            if assign(idx + 1):
+                return True
+            
+            assigned_minutes[ch] -= b_min
+            remaining[ch] += b_min
+            
+            used.remove(ch)
+            del schedule[b_name][pos]
 
             return False
 
@@ -306,12 +312,10 @@ def generate_schedule(players, targets, priority_flags, blocks):
         # update administratie
         for pos in POSITIONS_ORDER:
             ch = schedule[b_name][pos]
-            assigned_minutes[ch] += b_min
-
-            # harde cap check
-            if assigned_minutes[ch] > max_minutes.get(ch, 90):
+            
+            if assigned_minutes[ch] + b_min > max_minutes.get(ch, 90):
                 return None, None
-            remaining[ch] -= b_min
+            
             played[ch].append((pos, b_min))
 
     return schedule, played
@@ -564,58 +568,19 @@ if st.button("Genereer opstellingen"):
             table = []
             
             for p in selected_players:
-            
-                active_time = []
-                pd = defaultdict(float)
-                blks = []
-            
+                total = 0
+
                 for bn, bm in blocks:
-            
+                    pos_map = schedule[bn]
+                    current_players = set(pos_map.values())
+                
                     block_start = int(bn.split("-")[0])
                     block_end = int(bn.split("-")[1])
-            
-                    pos_map = schedule[bn]
-            
-                    # start-opstelling
-                    current_players = set(pos_map.values())
-            
-                    # events (wissels binnen dit blok)
-                    events = []
-                    if "moment_plan" in locals() and bn in moment_plan:
-                        for m in sorted(moment_plan[bn].keys()) if isinstance(moment_plan[bn], dict) else []:
-                            for i, o in moment_plan[bn].get(m, []):
-                                events.append((m, i, o))
-            
-                    events.sort()
-            
-                    t = block_start
-            
-                    for m, i, o in events:
-            
-                        # minuten voor iedereen die speelt in segment
-                        for sp in current_players:
-                            active_time.append((sp, t, m))
-            
-                        # wissel uitvoeren
-                        if o in current_players:
-                            current_players.remove(o)
-                        current_players.add(i)
-            
-                        t = m
-            
-                    # laatste segment
-                    for sp in current_players:
-                        active_time.append((sp, t, block_end))
-            
-                    # position tracking per blok (op basis van startopstelling)
-                    for pos, sp in pos_map.items():
-                        if sp == p:
-                            base = pos[:2] if pos.startswith(("cm", "cv")) else pos
-                            pd[base] += bm
-                            blks.append(f"{int(block_start)}-{int(block_end)}")
-            
-                # totaal minuten optellen uit tijdlijn
-                total = sum(end - start for sp, start, end in active_time if sp == p)
+                
+                    # check of speler in dit blok speelt
+                    if p in current_players:
+                        total += bm
+                
             
                 g = total
                 r = targets[p]

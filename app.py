@@ -77,17 +77,17 @@ for player in PLAYERS:
             c1, c2, c3, c4 = st.columns(4)
         
             with c1:
-                priority = st.checkbox("V", key=f"prio_{player}")
+                priority = st.checkbox("Voorang", key=f"prio_{player}")
         
             with c2:
-                first_half_only = st.checkbox("1H", key=f"fh_{player}")
+                first_half_only = st.checkbox("1ste Helft", key=f"fh_{player}")
         
             with c3:
-                second_half_only = st.checkbox("2H", key=f"sh_{player}")
+                second_half_only = st.checkbox("2de Helft", key=f"sh_{player}")
         
             with c4:
                 max_min = st.number_input(
-                    "Max",
+                    "Max minuten",
                     min_value=0,
                     max_value=90,
                     value=90,

@@ -471,7 +471,7 @@ if st.button("Genereer opstellingen"):
                     else:
                         base_minute = int(block_name.split("-")[0])
                         base_minute = 5 * round(base_minute / 5)
-                        time_slots = [base_minute - 5, base_minute, base_minute + 5]
+                        time_slots = [base_minute, base_minute + 5]
                 
                         moment_plan = {m: [] for m in time_slots}
                 

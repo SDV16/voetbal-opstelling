@@ -226,19 +226,20 @@ def generate_schedule(players, targets, priority_flags, blocks):
 
             cands = []
             for p in players:
+            
                 if p in used:
-                    if not allowed_in_block(p, b_name, availability_flags):
                     continue
-                continue
-
+            
+                if not allowed_in_block(p, b_name, availability_flags):
+                    continue
+            
                 rank = position_rank(p, pos)
                 if rank == 999:
                     continue
-
-                # basis haalbaarheid
+            
                 if remaining[p] - b_min < -10:
                     continue
-
+            
                 cands.append(p)
 
             if not cands:

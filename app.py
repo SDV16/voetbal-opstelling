@@ -54,6 +54,12 @@ priority_flags = {}
 max_minutes = {}
 
 for player in PLAYERS:
+    first_half_only = st.checkbox("Alleen 1e helft", key=f"fh_{player}")
+    second_half_only = st.checkbox("Alleen 2e helft", key=f"sh_{player}")
+    availability_flags[player] = {
+    "first": first_half_only,
+    "second": second_half_only
+    }
     col1, col2, col3 = st.columns([1,2,2])
     with col1:
         selected = st.checkbox(player, key=f"sel_{player}")
@@ -81,7 +87,26 @@ for player in PLAYERS:
         training_counts[player] = trainingen
         priority_flags[player] = priority
         max_minutes[player] = max_min
+        
+def allowed_in_block(player, block_name, availability_flags):
+    start = int(block_name.split("-")[0])
 
+    fh = availability_flags[player]["first"]
+    sh = availability_flags[player]["second"]
+
+    # geen vinkjes → altijd beschikbaar
+    if not fh and not sh:
+        return True
+
+    # alleen 1e helft
+    if fh and start >= 45:
+        return False
+
+    # alleen 2e helft
+    if sh and start < 45:
+        return False
+
+    return True
 # =====================================================
 # TARGET MINUTEN
 # =====================================================
@@ -202,7 +227,9 @@ def generate_schedule(players, targets, priority_flags, blocks):
             cands = []
             for p in players:
                 if p in used:
+                    if not allowed_in_block(p, b_name, availability_flags):
                     continue
+                continue
 
                 rank = position_rank(p, pos)
                 if rank == 999:

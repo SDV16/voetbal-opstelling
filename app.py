@@ -262,6 +262,10 @@ def generate_schedule(players, targets, priority_flags, blocks):
         for pos in POSITIONS_ORDER:
             ch = schedule[b_name][pos]
             assigned_minutes[ch] += b_min
+
+            # harde cap check
+            if assigned_minutes[ch] > max_minutes.get(ch, 90):
+                return None, None
             remaining[ch] -= b_min
             played[ch].append((pos, b_min))
 
@@ -279,9 +283,15 @@ def evaluate_blocks(players,training_counts,priority_flags,pattern, max_minutes)
     if schedule is None:
         return float('inf'),None,None,None,None
     mins = defaultdict(float)
-    for b_name,b_min in blocks:
-        for pos,sp in schedule[b_name].items():
+
+    for b_name, b_min in blocks:
+        for pos, sp in schedule[b_name].items():
             if sp in players:
+    
+                # cap check per update
+                if mins[sp] + b_min > max_minutes.get(sp, 90):
+                    return float('inf'), None, None, None, None
+    
                 mins[sp] += b_min
     total_dev = sum(abs(mins[p] - targets[p]) for p in players)
     return total_dev,blocks,schedule,targets,mins

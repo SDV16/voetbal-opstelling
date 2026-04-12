@@ -411,12 +411,6 @@ if st.button("Genereer opstellingen"):
                 # RECHTS: WISSELS (NIEUW MODEL)
                 # =============================
 
-                eruit_raw = list(prev_players - current_players)
-                erin_raw = list(current_players - prev_players)
-                
-                eruit = eruit_raw[:4]
-                erin = erin_raw[:4]
-                
                 with col_wissels:
                     st.subheader("Wissels")
                 
@@ -425,63 +419,65 @@ if st.button("Genereer opstellingen"):
                         prev_players = current_players.copy()
                         continue
                 
-                    # 1. bepaal echte positie mapping van huidige blok
                     pos_map = schedule[block_name]
                 
-                    # 2. build positie-index (speler → posities)
+                    # speler -> positie
                     player_pos = {}
                     for pos, sp in pos_map.items():
-                        player_pos.setdefault(sp, []).append(pos[:2])
+                        player_pos[sp] = pos[:2]
                 
-                    # 3. score wissels op positie-overlap
+                    eruit = list(prev_players - current_players)
+                    erin = list(current_players - prev_players)
+                
+                    # positie-match functie
                     def pos_score(i, o):
-                        ip = set(player_pos.get(i, []))
-                        op = set(player_pos.get(o, []))
-                
-                        if ip & op:
-                            return 0  # perfecte match
-                
-                        # fallback: penalty maar toegestaan
-                        return 1
+                        if player_pos.get(i) == player_pos.get(o):
+                            return 0
+                        if player_pos.get(i) in PLAYERS[o]["favourite"]:
+                            return 1
+                        if player_pos.get(i) in PLAYERS[o]["alternative"]:
+                            return 2
+                        return 3
                 
                     pairs = []
-                    used_i = set()
                     used_o = set()
                 
-                    MAX_TOTAL = 4
+                    for i in erin:
+                        best = None
                 
-                    candidates = sorted(
-                        [(i, o, pos_score(i, o)) for i in erin for o in eruit],
-                        key=lambda x: (x[2], abs(mins[x[0]] - mins[x[1]]))
-                    )
+                        for o in eruit:
+                            if o in used_o:
+                                continue
                 
-                    for i, o, _ in candidates:
-                        if len(pairs) >= MAX_TOTAL:
-                            break
-                        if i in used_i or o in used_o:
-                            continue
+                            score = pos_score(i, o) + abs(mins[i] - mins[o]) * 0.01
                 
+                            if best is None or score < best[0]:
+                                best = (score, i, o)
+                
+                        if best:
+                            _, i_best, o_best = best
+                            pairs.append((i_best, o_best))
+                            used_o.add(o_best)
+                
+                    # fallback: alles wat overblijft koppelen
+                    remaining_i = [p for p in erin if p not in [x for x,_ in pairs]]
+                    remaining_o = [p for p in eruit if p not in [y for _,y in pairs]]
+                
+                    for i, o in zip(remaining_i, remaining_o):
                         pairs.append((i, o))
-                        used_i.add(i)
-                        used_o.add(o)
                 
                     if not pairs:
                         st.markdown("_Geen logische wissels mogelijk_")
                     else:
-                        # tijdsverdeling
                         base_minute = int(block_name.split("-")[0])
                         base_minute = 5 * round(base_minute / 5)
-                
                         time_slots = [base_minute - 5, base_minute, base_minute + 5]
                 
                         moment_plan = {m: [] for m in time_slots}
-                        used = 0
                 
-                        for i, o in pairs:
-                            for m in time_slots:
-                                if len(moment_plan[m]) < 2:
-                                    moment_plan[m].append((i, o))
-                                    break
+                        for idx, (i, o) in enumerate(pairs):
+                            m = time_slots[idx % len(time_slots)]
+                            moment_plan[m].append((i, o))
                 
                         for m in time_slots:
                             if moment_plan[m]:

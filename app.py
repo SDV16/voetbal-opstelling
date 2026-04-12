@@ -564,19 +564,54 @@ if st.button("Genereer opstellingen"):
             table = []
             
             for p in selected_players:
-                total = 0
-
+            
+                active_time = []
+                pd = defaultdict(float)
+                blks = []
+            
                 for bn, bm in blocks:
-                    pos_map = schedule[bn]
-                    current_players = set(pos_map.values())
-                
+            
                     block_start = int(bn.split("-")[0])
                     block_end = int(bn.split("-")[1])
-                
-                    # check of speler in dit blok speelt
-                    if p in current_players:
-                        total += bm
-                
+            
+                    pos_map = schedule[bn]
+            
+                    # startopstelling
+                    current_players = set(pos_map.values())
+            
+                    # events (wissels)
+                    events = []
+                    if "moment_plan" in locals() and bn in moment_plan:
+                        for m in sorted(moment_plan[bn].keys()):
+                            for i, o in moment_plan[bn].get(m, []):
+                                events.append((m, i, o))
+            
+                    events.sort()
+            
+                    t = block_start
+            
+                    for m, i, o in events:
+            
+                        for sp in current_players:
+                            active_time.append((sp, t, m))
+            
+                        if o in current_players:
+                            current_players.remove(o)
+                        current_players.add(i)
+            
+                        t = m
+            
+                    for sp in current_players:
+                        active_time.append((sp, t, block_end))
+            
+                    # positie tracking
+                    for pos, sp in pos_map.items():
+                        if sp == p:
+                            base = pos[:2] if pos.startswith(("cm", "cv")) else pos
+                            pd[base] += bm
+                            blks.append(f"{block_start}-{block_end}")
+            
+                total = sum(end - start for sp, start, end in active_time if sp == p)
             
                 g = total
                 r = targets[p]
@@ -589,9 +624,11 @@ if st.button("Genereer opstellingen"):
                     "Gekregen": f"{int(round(g))} min",
                     "Verschil": f"{int(round(diff))} min",
                     "Posities": ", ".join(f"{k}:{int(v)}" for k, v in pd.items()),
+                    "Blokken": ", ".join(blks)
                 })
             
             table.sort(key=lambda x: (-int(x["Trainingen"][0]), -float(x["Gekregen"].split()[0])))
+            
             st.table(table)
             # =====================================================
             # POSITIE-OVERZICHT (Slots/Totaal: slots / aantal geselecteerde spelers die die basispositie kunnen spelen)

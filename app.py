@@ -57,7 +57,7 @@ availability_flags = defaultdict(lambda: {"first": False, "second": False})
 
 for player in PLAYERS:
 
-    col1, col2, col3, col4 = st.columns([1,2,2,2])
+    col1, col2, col3 = st.columns([1, 2, 2])
 
     with col1:
         selected = st.checkbox(player, key=f"sel_{player}")
@@ -65,24 +65,20 @@ for player in PLAYERS:
     if selected:
 
         with col2:
-            first_half_only = st.checkbox("Alleen 1e helft", key=f"fh_{player}")
-            second_half_only = st.checkbox("Alleen 2e helft", key=f"sh_{player}")
-
-        availability_flags[player] = {
-            "first": first_half_only,
-            "second": second_half_only
-        }
-
-        with col3:
             trainingen = st.radio(
                 f"Trainingen {player}",
-                options=[0,1,2],
+                options=[0, 1, 2],
+                format_func=lambda x: f"{x} trainingen",
                 horizontal=True,
                 key=f"train_{player}"
             )
 
-        with col4:
+        with col3:
             priority = st.checkbox("Voorrang", key=f"prio_{player}")
+
+            first_half_only = st.checkbox("1e helft", key=f"fh_{player}")
+            second_half_only = st.checkbox("2e helft", key=f"sh_{player}")
+
             max_min = st.number_input(
                 "Max min",
                 min_value=0,
@@ -96,6 +92,11 @@ for player in PLAYERS:
         training_counts[player] = trainingen
         priority_flags[player] = priority
         max_minutes[player] = max_min
+
+        availability_flags[player] = {
+            "first": first_half_only,
+            "second": second_half_only
+        }
         
 def allowed_in_block(player, block_name, availability_flags):
     start = int(block_name.split("-")[0])

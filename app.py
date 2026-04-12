@@ -1,6 +1,7 @@
 import streamlit as st
 from collections import defaultdict
 import math
+active_time = defaultdict(list)
 
 st.set_page_config(layout="wide")
 
@@ -503,28 +504,76 @@ if st.button("Genereer opstellingen"):
                 
             st.header("Minutenoverzicht")
             table = []
+            
             for p in selected_players:
+            
+                active_time = []
                 pd = defaultdict(float)
                 blks = []
-                for i,(bn,bm) in enumerate(blocks,1):
-                    for pos,sp in schedule[bn].items():
+            
+                for bn, bm in blocks:
+            
+                    block_start = int(bn.split("-")[0])
+                    block_end = int(bn.split("-")[1])
+            
+                    pos_map = schedule[bn]
+            
+                    # start-opstelling
+                    current_players = set(pos_map.values())
+            
+                    # events (wissels binnen dit blok)
+                    events = []
+                    if "moment_plan" in locals() and bn in moment_plan:
+                        for m in sorted(moment_plan[bn].keys()) if isinstance(moment_plan[bn], dict) else []:
+                            for i, o in moment_plan[bn].get(m, []):
+                                events.append((m, i, o))
+            
+                    events.sort()
+            
+                    t = block_start
+            
+                    for m, i, o in events:
+            
+                        # minuten voor iedereen die speelt in segment
+                        for sp in current_players:
+                            active_time.append((sp, t, m))
+            
+                        # wissel uitvoeren
+                        if o in current_players:
+                            current_players.remove(o)
+                        current_players.add(i)
+            
+                        t = m
+            
+                    # laatste segment
+                    for sp in current_players:
+                        active_time.append((sp, t, block_end))
+            
+                    # position tracking per blok (op basis van startopstelling)
+                    for pos, sp in pos_map.items():
                         if sp == p:
-                            k = pos[:2] if pos.startswith(("cm","cv")) else pos
-                            pd[k] += bm
-                            blks.append(str(i))
-                g = mins[p]
+                            base = pos[:2] if pos.startswith(("cm", "cv")) else pos
+                            pd[base] += bm
+                            blks.append(f"{int(block_start)}-{int(block_end)}")
+            
+                # totaal minuten optellen uit tijdlijn
+                total = sum(end - start for sp, start, end in active_time if sp == p)
+            
+                g = total
                 r = targets[p]
                 diff = g - r
+            
                 table.append({
-                    "Speler":p,
-                    "Trainingen":f"{training_counts[p]}x",
-                    "Recht op":f"{int(round(r))} min",
-                    "Gekregen":f"{int(round(g))} min",
-                    "Verschil":f"{int(round(diff))} min",
-                    "Posities":", ".join(f"{k}:{int(round(v))}" for k,v in pd.items()),
-                    "Blokken":", ".join(blks)
+                    "Speler": p,
+                    "Trainingen": f"{training_counts[p]}x",
+                    "Recht op": f"{int(round(r))} min",
+                    "Gekregen": f"{int(round(g))} min",
+                    "Verschil": f"{int(round(diff))} min",
+                    "Posities": ", ".join(f"{k}:{int(v)}" for k, v in pd.items()),
+                    "Blokken": ", ".join(blks)
                 })
-            table.sort(key=lambda x:(-int(x["Trainingen"][0]),-float(x["Gekregen"].split()[0])))
+            
+            table.sort(key=lambda x: (-int(x["Trainingen"][0]), -float(x["Gekregen"].split()[0])))
             st.table(table)
             # =====================================================
             # POSITIE-OVERZICHT (Slots/Totaal: slots / aantal geselecteerde spelers die die basispositie kunnen spelen)

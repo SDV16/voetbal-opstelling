@@ -475,9 +475,23 @@ if st.button("Genereer opstellingen"):
                 
                         moment_plan = {m: [] for m in time_slots}
                 
-                        for idx, (i, o) in enumerate(pairs):
-                            m = time_slots[idx % len(time_slots)]
-                            moment_plan[m].append((i, o))
+                        MAX_PER_MOMENT = 2
+
+                        moment_plan = {m: [] for m in time_slots}
+                        
+                        i = 0
+                        for pair in pairs:
+                            placed = False
+                        
+                            for m in time_slots:
+                                if len(moment_plan[m]) < MAX_PER_MOMENT:
+                                    moment_plan[m].append(pair)
+                                    placed = True
+                                    break
+                        
+                            # als alles vol zit: stop
+                            if not placed:
+                                break
                 
                         for m in time_slots:
                             if moment_plan[m]:

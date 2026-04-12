@@ -224,99 +224,95 @@ def build_blocks_from_pattern(pattern):
 # GENERATE SCHEDULE
 # =====================================================
 def generate_schedule(players, targets, priority_flags, blocks):
-    remaining = targets.copy()
     schedule = {}
     played = defaultdict(list)
 
-    # houdt bij hoeveel minuten iemand al heeft gekregen
     assigned_minutes = defaultdict(int)
+    remaining = targets.copy()
 
-    for b_name, b_min in blocks:
+    def assign_block(b_idx):
+        if b_idx == len(blocks):
+            return True
+
+        b_name, b_min = blocks[b_idx]
         schedule[b_name] = {}
         used = set()
 
-        def assign(idx):
-            if idx == len(POSITIONS_ORDER):
+        def assign(pos_idx):
+            if pos_idx == len(POSITIONS_ORDER):
                 return True
 
-            pos = POSITIONS_ORDER[idx]
-            base_pos = pos[:2] if pos.startswith(("cm","cv")) else pos
+            pos = POSITIONS_ORDER[pos_idx]
 
             cands = []
             for p in players:
-            
+
                 if p in used:
                     continue
-            
+
                 if not allowed_in_block(p, b_name, availability_flags):
                     continue
-            
-                rank = position_rank(p, pos)
-                if rank == 999:
+
+                if position_rank(p, pos) == 999:
                     continue
-            
+
+                # harde constraints
+                if remaining[p] - b_min < -10:
+                    continue
+
                 if assigned_minutes[p] + b_min > max_minutes.get(p, 90):
                     continue
-            
+
                 cands.append(p)
 
             if not cands:
                 return False
 
             def score(p):
-                rank = position_rank(p, pos)
-
-                # remaining minuten (hoe hoger tekort, hoe eerder kiezen)
                 rem = -remaining[p]
-
-                # prioriteit
                 prio = -5 if priority_flags.get(p, False) else 0
-
-                # schaarste (jouw bestaande functie)
                 scarcity = -scarcity_bonus(p, pos, players)
+                rank_penalty = position_rank(p, pos) * 500
+                under = max(0, targets[p] - assigned_minutes[p])
 
-                # ranking penalty (favourite / alt / emergency)
-                rank_penalty = rank * 500
-
-                # ==============================
-                # NIEUW: under-target correctie
-                # ==============================
-                under_target = max(0, targets[p] - assigned_minutes[p])
-
-                under_target_bonus = -under_target * 2
-
-                return rem + rank_penalty + scarcity + prio + under_target_bonus
+                return rem + rank_penalty + scarcity + prio - under * 2
 
             cands.sort(key=score)
 
-            schedule[b_name][pos] = ch
-            used.add(ch)
-            
-            assigned_minutes[ch] += b_min
-            remaining[ch] -= b_min
-            
-            if assign(idx + 1):
-                return True
-            
-            assigned_minutes[ch] -= b_min
-            remaining[ch] += b_min
-            
-            used.remove(ch)
-            del schedule[b_name][pos]
+            for p in cands:
+
+                schedule[b_name][pos] = p
+                used.add(p)
+
+                # APPLY
+                assigned_minutes[p] += b_min
+                remaining[p] -= b_min
+
+                if assign(pos_idx + 1):
+                    return True
+
+                # ROLLBACK
+                assigned_minutes[p] -= b_min
+                remaining[p] += b_min
+
+                used.remove(p)
+                del schedule[b_name][pos]
 
             return False
 
         if not assign(0):
             return None, None
 
-        # update administratie
-        for pos in POSITIONS_ORDER:
-            ch = schedule[b_name][pos]
-            
-            if assigned_minutes[ch] + b_min > max_minutes.get(ch, 90):
-                return None, None
-            
-            played[ch].append((pos, b_min))
+        # finalize block (alleen administratie, geen search)
+        for pos, p in schedule[b_name].items():
+            played[p].append((pos, b_min))
+
+        return assign_block(b_idx + 1)
+
+    ok = assign_block(0)
+
+    if not ok:
+        return None, None
 
     return schedule, played
 

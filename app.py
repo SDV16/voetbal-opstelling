@@ -570,7 +570,6 @@ if st.button("Genereer opstellingen"):
                     "Gekregen": f"{int(round(g))} min",
                     "Verschil": f"{int(round(diff))} min",
                     "Posities": ", ".join(f"{k}:{int(v)}" for k, v in pd.items()),
-                    "Blokken": ", ".join(blks)
                 })
             
             table.sort(key=lambda x: (-int(x["Trainingen"][0]), -float(x["Gekregen"].split()[0])))

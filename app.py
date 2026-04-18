@@ -2,6 +2,7 @@ import streamlit as st
 from collections import defaultdict
 import math
 active_time = defaultdict(list)
+failure_log = defaultdict(list)
 
 st.set_page_config(layout="wide")
 
@@ -263,6 +264,7 @@ def generate_schedule(players, targets, priority_flags, blocks):
                 cands.append(p)
 
             if not cands:
+                failure_log["short"].append(f"{b_name} - {pos}: geen kandidaten")
                 return False
 
             def score(p):
@@ -313,6 +315,7 @@ def generate_schedule(players, targets, priority_flags, blocks):
 
             # harde cap check
             if assigned_minutes[ch] > max_minutes.get(ch, 90):
+                failure_log["short"].append(f"{ch} overschrijdt max minuten in blok {b_name}")
                 return None, None
             remaining[ch] -= b_min
             played[ch].append((pos, b_min))
@@ -395,12 +398,17 @@ def compatible(i, o):
 # OUTPUT
 # =====================================================
 if st.button("Genereer opstellingen"):
+    failure_log.clear()   
     if len(selected_players) < 10:
         st.error("Minimaal 10 spelers nodig")
     else:
         res = choose_best_blocks(list(selected_players.keys()),training_counts,priority_flags,max_minutes)
         if res[0] is None:
             st.error("Geen opstelling gevonden.")
+            if failure_log["short"]:
+                st.subheader("Waarom niet gelukt:")
+                for msg in failure_log["short"][:10]:
+                    st.write("-", msg)
         else:
             blocks, schedule, targets, mins, is_strict, max_dev, total_dev = res
 

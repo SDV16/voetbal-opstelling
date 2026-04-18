@@ -296,27 +296,20 @@ def generate_schedule(players, targets, priority_flags, blocks):
 
             def score(p):
                 rank = position_rank(p, pos)
-
-                # remaining minuten (hoe hoger tekort, hoe eerder kiezen)
+            
                 rem = -remaining[p]
-
-                # prioriteit
                 prio = -5 if priority_flags.get(p, False) else 0
-
-                # schaarste (jouw bestaande functie)
                 scarcity = -scarcity_bonus(p, pos, players)
-
-                # ranking penalty (favourite / alt / emergency)
                 rank_penalty = rank * 500
-
-                # ==============================
-                # NIEUW: under-target correctie
-                # ==============================
+            
                 under_target = max(0, targets[p] - assigned_minutes[p])
-
                 under_target_bonus = -under_target * 2
-
-                return rem + rank_penalty + scarcity + prio + under_target_bonus
+            
+                # NIEUW
+                overuse = max(0, assigned_minutes[p] + b_min - targets[p])
+                overuse_penalty = overuse * 50
+            
+                return rem + rank_penalty + scarcity + prio + under_target_bonus + overuse_penalty
 
             cands.sort(key=score)
 

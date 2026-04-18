@@ -264,8 +264,35 @@ def generate_schedule(players, targets, priority_flags, blocks):
                 cands.append(p)
 
             if not cands:
-                failure_log["short"].append(f"{b_name} - {pos}: geen kandidaten")
-                return False
+                # =====================================
+                # FALLBACK: minuten limiet versoepelen
+                # =====================================
+                relaxed_cands = []
+            
+                for p in players:
+            
+                    if p in used:
+                        continue
+            
+                    if not allowed_in_block(p, b_name, availability_flags):
+                        continue
+            
+                    rank = position_rank(p, pos)
+                    if rank == 999:
+                        continue
+            
+                    # minder strenge limiet (bijv. -25 i.p.v. -10)
+                    if remaining[p] - b_min < -25:
+                        continue
+            
+                    relaxed_cands.append(p)
+            
+                if relaxed_cands:
+                    failure_log["fallback"].append(f"{b_name}-{pos}: fallback gebruikt")
+                    cands = relaxed_cands
+                else:
+                    failure_log["short"].append(f"{b_name} - {pos}: geen kandidaten (zelfs fallback niet)")
+                    return False
 
             def score(p):
                 rank = position_rank(p, pos)

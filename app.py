@@ -31,6 +31,9 @@ PLAYERS = {
     "Tobias": {"favourite":["sp"], "alternative":["rb", "lb"], "emergency":[]},
     "Nicky": {"favourite":["ra", "la"], "alternative":[], "emergency":["cv"]},
     "Leon": {"favourite":["cm"], "alternative":[""], "emergency":["lb", "rb"]},
+    "Cas": {"favourite":[], "alternative":["sp", "lb", "rb"], "emergency":[]},
+    "Teun": {"favourite":["sp"], "alternative":["lb", "rb"], "emergency":[]},
+    "Lukas": {"favourite":["cv"], "alternative":[], "emergency":["la", "ra"]},
 }
 
 POSITIONS_ORDER = ["sp", "cv1", "cv2", "cm1", "cm2", "cm3", "lb", "rb", "la", "ra"]

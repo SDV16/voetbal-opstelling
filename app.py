@@ -312,7 +312,7 @@ def generate_schedule(players, targets, priority_flags, blocks):
                 elif overuse <= 10:
                     overuse_penalty = (overuse ** 20) * 25
                 else:
-                    overuse_penalty = (overuse ** 300) * 50
+                    overuse_penalty = (overuse ** 30) * 50
                             
                 return rem + rank_penalty + scarcity + prio + under_target_bonus + overuse_penalty
 

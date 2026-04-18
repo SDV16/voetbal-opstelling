@@ -307,7 +307,7 @@ def generate_schedule(players, targets, priority_flags, blocks):
             
                 # NIEUW
                 overuse = max(0, assigned_minutes[p] + b_min - targets[p])
-                overuse_penalty = overuse * 50
+                overuse_penalty = (overuse ** 2) * 20
             
                 return rem + rank_penalty + scarcity + prio + under_target_bonus + overuse_penalty
 

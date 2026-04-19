@@ -16,7 +16,7 @@ PLAYERS = {
     "Jaimy": {"favourite":["sp"], "alternative":["lb","rb"], "emergency":[]},
     "Sjoerd": {"favourite":["cm"], "alternative":["sp"], "emergency":[]},
     "Pelle": {"favourite":["sp", "rb"], "alternative":["cm", "lb"], "emergency":[]},
-    "Tim": {"favourite":[], "alternative":["cm", "sp"], "emergency":[]},
+    "Tim": {"favourite":["cm"], "alternative":["sp"], "emergency":[]},
     "Steijn": {"favourite":["cm"], "alternative":[], "emergency":["sp"]},
     "Jorra": {"favourite":["cm"], "alternative":[], "emergency":[]},
     "Tycho": {"favourite":["cm"], "alternative":[], "emergency":[]},

@@ -282,7 +282,7 @@ def generate_schedule(players, targets, priority_flags, blocks):
                         continue
             
                     # minder strenge limiet (bijv. -25 i.p.v. -10)
-                    if remaining[p] - b_min < -10:
+                    if remaining[p] - b_min < -15:
                         continue
             
                     relaxed_cands.append(p)

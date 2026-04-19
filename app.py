@@ -3,6 +3,7 @@ from collections import defaultdict
 import math
 active_time = defaultdict(list)
 failure_log = defaultdict(list)
+failure_log_seen = set()
 
 st.set_page_config(layout="wide")
 
@@ -263,9 +264,13 @@ def generate_schedule(players, targets, priority_flags, blocks):
             
                 cands.append(p)
 
-            if not cands:
-                failure_log["short"].append(f"{b_name} - {pos}: geen kandidaten")
-                return False
+            msg = f"{b_name} - {pos}: geen kandidaten"
+
+            if msg not in failure_log_seen:
+                failure_log["short"].append(msg)
+                failure_log_seen.add(msg)
+            
+            return False
 
             def score(p):
                 rank = position_rank(p, pos)

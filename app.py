@@ -437,8 +437,16 @@ if st.button("Genereer opstellingen"):
             st.error("Geen opstelling gevonden.")
             if failure_log["short"]:
                 st.subheader("Waarom niet gelukt:")
-                for msg in failure_log["short"][:10]:
-                    st.write("-", msg)
+                from collections import Counter
+
+                counts = Counter(failure_log["short"])
+                
+                for msg, count in counts.items():
+                    if count == 1:
+                        st.write(f"- {msg}")
+                    else:
+                        st.write(f"- {msg} (x{count})")
+
         else:
             blocks, schedule, targets, mins, is_strict, max_dev, total_dev = res
 

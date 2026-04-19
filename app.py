@@ -32,7 +32,7 @@ PLAYERS = {
     "Tobias": {"favourite":["sp"], "alternative":["rb", "lb"], "emergency":[]},
     "Nicky": {"favourite":["ra", "la"], "alternative":[], "emergency":["cv"]},
     "Leon": {"favourite":["cm"], "alternative":[""], "emergency":["lb", "rb"]},
-    "Cas": {"favourite":[], "alternative":["sp", "lb", "rb"], "emergency":[]},
+    "Cas": {"favourite":["sp", "lb", "rb"], "alternative":["cm"], "emergency":[]},
     "Teun": {"favourite":["sp"], "alternative":["lb", "rb"], "emergency":["cm"]},
     "Lukas": {"favourite":["cv"], "alternative":[], "emergency":["la", "ra"]},
 }

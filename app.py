@@ -32,8 +32,8 @@ PLAYERS = {
     "Tobias": {"favourite":["sp"], "alternative":["rb", "lb"], "emergency":[]},
     "Nicky": {"favourite":["ra", "la"], "alternative":[], "emergency":["cv"]},
     "Leon": {"favourite":["cm"], "alternative":[""], "emergency":["lb", "rb"]},
-    "Cas": {"favourite":[], "alternative":["sp", "lb", "rb"], "emergency":["cm"]},
-    "Teun": {"favourite":["sp"], "alternative":["lb", "rb"], "emergency":["cm"]},
+    "Cas": {"favourite":[], "alternative":["sp", "lb", "rb"], "emergency":[]},
+    "Teun": {"favourite":["sp"], "alternative":["lb", "rb"], "emergency":[]},
     "Lukas": {"favourite":["cv"], "alternative":[], "emergency":["la", "ra"]},
 }
 
@@ -264,57 +264,32 @@ def generate_schedule(players, targets, priority_flags, blocks):
                 cands.append(p)
 
             if not cands:
-                # =====================================
-                # FALLBACK: minuten limiet versoepelen
-                # =====================================
-                relaxed_cands = []
-            
-                for p in players:
-            
-                    if p in used:
-                        continue
-            
-                    if not allowed_in_block(p, b_name, availability_flags):
-                        continue
-            
-                    rank = position_rank(p, pos)
-                    if rank == 999:
-                        continue
-            
-                    # minder strenge limiet (bijv. -25 i.p.v. -10)
-                    if remaining[p] - b_min < -15:
-                        continue
-            
-                    relaxed_cands.append(p)
-            
-                if relaxed_cands:
-                    failure_log["fallback"].append(f"{b_name}-{pos}: fallback gebruikt")
-                    cands = relaxed_cands
-                else:
-                    failure_log["short"].append(f"{b_name} - {pos}: geen kandidaten (zelfs fallback niet)")
-                    return False
+                failure_log["short"].append(f"{b_name} - {pos}: geen kandidaten")
+                return False
 
             def score(p):
                 rank = position_rank(p, pos)
-            
+
+                # remaining minuten (hoe hoger tekort, hoe eerder kiezen)
                 rem = -remaining[p]
+
+                # prioriteit
                 prio = -5 if priority_flags.get(p, False) else 0
+
+                # schaarste (jouw bestaande functie)
                 scarcity = -scarcity_bonus(p, pos, players)
+
+                # ranking penalty (favourite / alt / emergency)
                 rank_penalty = rank * 500
-            
+
+                # ==============================
+                # NIEUW: under-target correctie
+                # ==============================
                 under_target = max(0, targets[p] - assigned_minutes[p])
+
                 under_target_bonus = -under_target * 2
-            
-                # NIEUW
-                overuse = max(0, assigned_minutes[p] + b_min - targets[p])
-                if overuse <= 5:
-                    overuse_penalty = overuse * 20
-                elif overuse <= 10:
-                    overuse_penalty = (overuse ** 20) * 25
-                else:
-                    overuse_penalty = (overuse ** 30) * 50
-                            
-                return rem + rank_penalty + scarcity + prio + under_target_bonus + overuse_penalty
+
+                return rem + rank_penalty + scarcity + prio + under_target_bonus
 
             cands.sort(key=score)
 

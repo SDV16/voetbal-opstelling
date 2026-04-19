@@ -37,8 +37,38 @@ PLAYERS = {
     "Lukas": {"favourite":["cv"], "alternative":[], "emergency":["la", "ra"]},
 }
 
-POSITIONS_ORDER = ["cm1", "cm2", "cm3", "sp", "cv1", "cv2", "lb", "rb", "la", "ra"]
+def compute_dynamic_position_order(players):
+    base_positions = ["sp", "cv", "cm", "lb", "rb", "la", "ra"]
 
+    def count_pool(bp):
+        fav = sum(bp in PLAYERS[p]["favourite"] for p in players)
+        alt = sum(bp in PLAYERS[p]["alternative"] for p in players)
+        emg = sum(bp in PLAYERS[p]["emergency"] for p in players)
+        total = fav + alt + emg
+        return total, fav, alt, emg
+
+    # sorteer op:
+    # 1. kleinste totale pool
+    # 2. kleinste aantal favourieten
+    # 3. kleinste aantal alternatieven
+    sorted_bases = sorted(
+        base_positions,
+        key=lambda bp: count_pool(bp)
+    )
+
+    # nu vertalen naar jouw posities
+    expanded = []
+    for bp in sorted_bases:
+        if bp == "cm":
+            expanded += ["cm1", "cm2", "cm3"]
+        elif bp == "cv":
+            expanded += ["cv1", "cv2"]
+        else:
+            expanded.append(bp)
+
+    return expanded
+
+POSITIONS_ORDER = compute_dynamic_position_order(selected_players.keys())
 TOTAL_FIELD_MINUTES = 90 * 10
 BLOCK_OPTIONS = [30, 22.5, 20, 15, 10]
 

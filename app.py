@@ -68,7 +68,6 @@ def compute_dynamic_position_order(players):
 
     return expanded
 
-POSITIONS_ORDER = compute_dynamic_position_order(selected_players.keys())
 TOTAL_FIELD_MINUTES = 90 * 10
 BLOCK_OPTIONS = [30, 22.5, 20, 15, 10]
 
@@ -432,6 +431,7 @@ if st.button("Genereer opstellingen"):
     if len(selected_players) < 10:
         st.error("Minimaal 10 spelers nodig")
     else:
+        POSITIONS_ORDER = compute_dynamic_position_order(selected_players.keys())
         res = choose_best_blocks(list(selected_players.keys()),training_counts,priority_flags,max_minutes)
         if res[0] is None:
             st.error("Geen opstelling gevonden.")

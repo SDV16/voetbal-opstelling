@@ -37,7 +37,7 @@ PLAYERS = {
     "Lukas": {"favourite":["cv"], "alternative":[], "emergency":["la", "ra"]},
 }
 
-POSITIONS_ORDER = ["sp", "cv1", "cv2", "cm1", "cm2", "cm3", "lb", "rb", "la", "ra"]
+POSITIONS_ORDER = ["cm1", "cm2", "cm3", "sp", "cv1", "cv2", "lb", "rb", "la", "ra"]
 
 TOTAL_FIELD_MINUTES = 90 * 10
 BLOCK_OPTIONS = [30, 22.5, 20, 15, 10]

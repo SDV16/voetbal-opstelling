@@ -36,7 +36,7 @@ PLAYERS = {
     "Teun": {"favourite":["sp"], "alternative":["lb", "rb"], "emergency":["cm"]},
     "Lukas": {"favourite":["cv"], "alternative":[], "emergency":["la", "ra"]},
     "Abel": {"favourite":["lb", "rb"], "alternative":[], "emergency":[]},
-    "Niels": {"favourite":["ra", "la"], "alternative":[], "emergency":["cm"]},
+    "Niels": {"favourite":["ra", "la"], "alternative":["cm"], "emergency":[]},
 }
 
 def compute_dynamic_position_order(players):

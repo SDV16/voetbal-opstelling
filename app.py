@@ -241,6 +241,30 @@ def build_blocks_from_pattern(pattern):
         start = end
     return blocks
 
+def optimize_position_swaps(block_assignment):
+    """Wissel spelers onderling van positie als dat hun voorkeur verbetert."""
+    improved = True
+    while improved:
+        improved = False
+        positions = list(block_assignment.keys())
+        for i in range(len(positions)):
+            for j in range(i + 1, len(positions)):
+                pos_a = positions[i]
+                pos_b = positions[j]
+                player_a = block_assignment[pos_a]
+                player_b = block_assignment[pos_b]
+
+                huidige_score = position_rank(player_a, pos_a) + position_rank(player_b, pos_b)
+                swap_score    = position_rank(player_a, pos_b) + position_rank(player_b, pos_a)
+
+                # Alleen wisselen als beide spelers de positie kunnen spelen én het beter is
+                if swap_score < huidige_score:
+                    if position_rank(player_a, pos_b) != 999 and position_rank(player_b, pos_a) != 999:
+                        block_assignment[pos_a] = player_b
+                        block_assignment[pos_b] = player_a
+                        improved = True
+    return block_assignment
+
 # =====================================================
 # GENERATE SCHEDULE
 # =====================================================
@@ -320,6 +344,9 @@ def generate_schedule(players, targets, priority_flags, blocks):
 
         if not assign(0):
             return None, None
+        
+        # Optimaliseer posities binnen dit blok
+        schedule[b_name] = optimize_position_swaps(schedule[b_name])
 
         for pos in POSITIONS_ORDER:
             ch = schedule[b_name][pos]

@@ -549,7 +549,10 @@ if st.button("Genereer opstellingen"):
                         moment_plan = {m: [] for m in time_slots}
                         MAX_PER_MOMENT = 2
 
-                        for pair in pairs:
+                        # NIEUW — spelers met meeste minuten komen later in (krijgen -5 min)
+                        pairs_sorted = sorted(pairs, key=lambda pair: -mins[pair[0]])
+                        
+                        for pair in pairs_sorted:
                             placed = False
                             for m in time_slots:
                                 if len(moment_plan[m]) < MAX_PER_MOMENT:

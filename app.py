@@ -49,16 +49,11 @@ def compute_dynamic_position_order(players):
         total = fav + alt + emg
         return total, fav, alt, emg
 
-    # sorteer op:
-    # 1. kleinste totale pool
-    # 2. kleinste aantal favourieten
-    # 3. kleinste aantal alternatieven
     sorted_bases = sorted(
         base_positions,
         key=lambda bp: count_pool(bp)
     )
 
-    # nu vertalen naar jouw posities
     expanded = []
     for bp in sorted_bases:
         if bp == "cm":
@@ -146,19 +141,17 @@ def allowed_in_block(player, block_name, availability_flags):
     fh = availability_flags[player]["first"]
     sh = availability_flags[player]["second"]
 
-    # geen vinkjes → altijd beschikbaar
     if not fh and not sh:
         return True
 
-    # alleen 1e helft
     if fh and start >= 45:
         return False
 
-    # alleen 2e helft
     if sh and start < 45:
         return False
 
     return True
+
 # =====================================================
 # TARGET MINUTEN
 # =====================================================
@@ -180,13 +173,8 @@ def calculate_target_minutes(players, training_counts, max_minutes):
     final = {}
     for p in players:
         candidate = raw[p] + redistribute
-    
-        # max cap toepassen
         cap = min(max_minutes.get(p, 90), 90)
-
         capped = min(candidate, cap)
-        
-        # NOOIT afronden hier
         final[p] = capped
     return final
 
@@ -247,9 +235,8 @@ def build_blocks_from_pattern(pattern):
     start = 0
     for size in pattern:
         end = start + size
-        # blok mag niet door de rust heen
         if start < 45 < end:
-            return None # ongeldig patroon
+            return None
         blocks.append((f"{int(start)}-{int(end)}", size))
         start = end
     return blocks
@@ -261,8 +248,6 @@ def generate_schedule(players, targets, priority_flags, blocks):
     remaining = targets.copy()
     schedule = {}
     played = defaultdict(list)
-
-    # houdt bij hoeveel minuten iemand al heeft gekregen
     assigned_minutes = defaultdict(int)
 
     for b_name, b_min in blocks:
@@ -289,6 +274,7 @@ def generate_schedule(players, targets, priority_flags, blocks):
                 if rank == 999:
                     continue
             
+                # AANGEPAST: van -10 naar -5
                 if remaining[p] - b_min < -5:
                     continue
             
@@ -300,22 +286,22 @@ def generate_schedule(players, targets, priority_flags, blocks):
 
             def score(p):
                 rank = position_rank(p, pos)
-            
+
                 # Hoe ver zit de speler van zijn target?
                 over_target = assigned_minutes[p] - targets[p]
                 under_target = max(0, targets[p] - assigned_minutes[p])
-            
+
                 # Minuten eerlijkheid — zwaar gewogen
-                minute_score = over_target * 15        # al teveel gehad → deprioriteer sterk
-                under_bonus = -under_target * 10       # tekort → prioriteer sterk
-            
+                minute_score = over_target * 15
+                under_bonus = -under_target * 10
+
                 # Positievoorkeur — zachte beperking (was 500, nu 40)
                 rank_penalty = (rank - 1) * 40
-            
+
                 # Schaarste en prioriteit
                 scarcity = -scarcity_bonus(p, pos, players)
                 prio = -8 if priority_flags.get(p, False) else 0
-            
+
                 return minute_score + under_bonus + rank_penalty + scarcity + prio
 
             cands.sort(key=score)
@@ -335,12 +321,10 @@ def generate_schedule(players, targets, priority_flags, blocks):
         if not assign(0):
             return None, None
 
-        # update administratie
         for pos in POSITIONS_ORDER:
             ch = schedule[b_name][pos]
             assigned_minutes[ch] += b_min
 
-            # harde cap check
             if assigned_minutes[ch] > max_minutes.get(ch, 90):
                 failure_log["short"].append(f"{ch} overschrijdt max minuten in blok {b_name}")
                 return None, None
@@ -365,11 +349,8 @@ def evaluate_blocks(players,training_counts,priority_flags,pattern, max_minutes)
     for b_name, b_min in blocks:
         for pos, sp in schedule[b_name].items():
             if sp in players:
-    
-                # cap check per update
                 if mins[sp] + b_min > max_minutes.get(sp, 90):
                     return float('inf'), None, None, None, None
-    
                 mins[sp] += b_min
     total_dev = sum(abs(mins[p] - targets[p]) for p in players)
     return total_dev,blocks,schedule,targets,mins
@@ -408,7 +389,6 @@ def choose_best_blocks(players, training_counts, priority_flags, max_minutes):
     return None,None,None,None,None,0,0
 
 def compatible(i, o):
-    """True als i logisch kan vervangen door o"""
     i_pos = set()
     o_pos = set()
 
@@ -418,7 +398,6 @@ def compatible(i, o):
     for p in PLAYERS[o]["favourite"] + PLAYERS[o]["alternative"] + PLAYERS[o]["emergency"]:
         o_pos.add(p)
 
-    # overlap in mogelijke posities
     return len(i_pos & o_pos) > 0
 
 # =====================================================
@@ -452,32 +431,25 @@ if st.button("Genereer opstellingen"):
             st.write(", ".join(f"{n} ({int(m)} min)" for n, m in blocks))
             
             prev_players = set()
+
+            # Bewaar alle moment_plans per blok voor het minutenoverzicht
+            all_moment_plans = {}
             
             for block_idx, (block_name, block_min) in enumerate(blocks):
             
-                # =============================
-                # VOORBEREIDING
-                # =============================
                 current_players = set(
                     speler
                     for pos, speler in schedule[block_name].items()
                     if speler not in ("FOUT", None)
                 )
             
-                # RAW diff (GEEN limiet hier)
                 eruit = sorted(prev_players - current_players)
                 erin = sorted(current_players - prev_players)
             
                 display_block_name = block_name
             
-                # =============================
-                # KOLOMMEN (HIER GEBEURT HET)
-                # =============================
                 col_opstelling, col_wissels = st.columns([1,2])
             
-                # =============================
-                # LINKS: OPSTELLING
-                # =============================
                 with col_opstelling:
                     st.subheader(f"Blok {display_block_name} ({int(block_min)} min)")
             
@@ -513,21 +485,17 @@ if st.button("Genereer opstellingen"):
                     row({0:"cm1",3:"cm2",6:"cm3"})
                     row({0:"la",2:"cv1",4:"cv2",6:"ra"})
                 
-                # =============================
-                # RECHTS: WISSELS (NIEUW MODEL)
-                # =============================
-
                 with col_wissels:
                     st.subheader("Wissels")
                 
                     if block_idx == 0:
                         st.markdown("_Eerste blok – iedereen erin_")
                         prev_players = current_players.copy()
+                        all_moment_plans[block_name] = {}
                         continue
                 
                     pos_map = schedule[block_name]
                 
-                    # speler -> positie
                     player_pos = {}
                     for pos, sp in pos_map.items():
                         player_pos[sp] = pos[:2]
@@ -535,7 +503,6 @@ if st.button("Genereer opstellingen"):
                     eruit = list(prev_players - current_players)
                     erin = list(current_players - prev_players)
                 
-                    # positie-match functie
                     def pos_score(i, o):
                         if player_pos.get(i) == player_pos.get(o):
                             return 0
@@ -565,7 +532,6 @@ if st.button("Genereer opstellingen"):
                             pairs.append((i_best, o_best))
                             used_o.add(o_best)
                 
-                    # fallback: alles wat overblijft koppelen
                     remaining_i = [p for p in erin if p not in [x for x,_ in pairs]]
                     remaining_o = [p for p in eruit if p not in [y for _,y in pairs]]
                 
@@ -574,28 +540,22 @@ if st.button("Genereer opstellingen"):
                 
                     if not pairs:
                         st.markdown("_Geen logische wissels mogelijk_")
+                        all_moment_plans[block_name] = {}
                     else:
                         base_minute = int(block_name.split("-")[0])
                         base_minute = 5 * round(base_minute / 5)
                         time_slots = [base_minute, base_minute + 5]
                 
                         moment_plan = {m: [] for m in time_slots}
-                
                         MAX_PER_MOMENT = 2
 
-                        moment_plan = {m: [] for m in time_slots}
-                        
-                        i = 0
                         for pair in pairs:
                             placed = False
-                        
                             for m in time_slots:
                                 if len(moment_plan[m]) < MAX_PER_MOMENT:
                                     moment_plan[m].append(pair)
                                     placed = True
                                     break
-                        
-                            # als alles vol zit: stop
                             if not placed:
                                 break
                 
@@ -604,15 +564,21 @@ if st.button("Genereer opstellingen"):
                                 st.markdown(f"**Minuut {m}**")
                                 for i, o in moment_plan[m]:
                                     st.markdown(f"{i} → {o}")
+
+                        # Sla moment_plan op voor het minutenoverzicht
+                        all_moment_plans[block_name] = moment_plan
                 
                     prev_players = current_players.copy()
                 
+            # =====================================================
+            # MINUTENOVERZICHT
+            # =====================================================
             st.header("Minutenoverzicht")
             table = []
             
             for p in selected_players:
             
-                active_time = []
+                active_time_list = []
                 pd = defaultdict(float)
                 blks = []
             
@@ -622,47 +588,41 @@ if st.button("Genereer opstellingen"):
                     block_end = int(bn.split("-")[1])
             
                     pos_map = schedule[bn]
-            
-                    # start-opstelling
-                    current_players = set(pos_map.values())
-            
-                    # events (wissels binnen dit blok)
+                    current_players_set = set(pos_map.values())
+
+                    # Haal de echte wissel-momenten op uit all_moment_plans
                     events = []
-                    if "moment_plan" in locals() and bn in moment_plan:
-                        for m in sorted(moment_plan[bn].keys()) if isinstance(moment_plan[bn], dict) else []:
-                            for i, o in moment_plan[bn].get(m, []):
-                                events.append((m, i, o))
-            
+                    mp = all_moment_plans.get(bn, {})
+                    for m, pairs in mp.items():
+                        for i, o in pairs:
+                            events.append((m, i, o))
                     events.sort()
             
                     t = block_start
             
                     for m, i, o in events:
-            
-                        # minuten voor iedereen die speelt in segment
-                        for sp in current_players:
-                            active_time.append((sp, t, m))
-            
-                        # wissel uitvoeren
-                        if o in current_players:
-                            current_players.remove(o)
-                        current_players.add(i)
-            
+                        # Minuten bijhouden voor iedereen in het segment
+                        for sp in current_players_set:
+                            active_time_list.append((sp, t, m))
+                        # Wissel uitvoeren
+                        if o in current_players_set:
+                            current_players_set.remove(o)
+                        current_players_set.add(i)
                         t = m
             
-                    # laatste segment
-                    for sp in current_players:
-                        active_time.append((sp, t, block_end))
+                    # Laatste segment tot einde blok
+                    for sp in current_players_set:
+                        active_time_list.append((sp, t, block_end))
             
-                    # position tracking per blok (op basis van startopstelling)
+                    # Positie tracking per blok
                     for pos, sp in pos_map.items():
                         if sp == p:
-                            base = pos[:2] if pos.startswith(("cm", "cv")) else pos
-                            pd[base] += bm
+                            base_p = pos[:2] if pos.startswith(("cm", "cv")) else pos
+                            pd[base_p] += bm
                             blks.append(f"{int(block_start)}-{int(block_end)}")
             
-                # totaal minuten optellen uit tijdlijn
-                total = sum(end - start for sp, start, end in active_time if sp == p)
+                # Totaal minuten optellen uit tijdlijn
+                total = sum(end - start for sp, start, end in active_time_list if sp == p)
             
                 g = total
                 r = targets[p]
@@ -679,8 +639,9 @@ if st.button("Genereer opstellingen"):
             
             table.sort(key=lambda x: (-int(x["Trainingen"][0]), -float(x["Gekregen"].split()[0])))
             st.table(table)
+
             # =====================================================
-            # POSITIE-OVERZICHT (Slots/Totaal: slots / aantal geselecteerde spelers die die basispositie kunnen spelen)
+            # POSITIE-OVERZICHT
             # =====================================================
             base_positions = ["sp", "cv", "cm", "lb", "rb", "la", "ra"]
             slots_per_base = {bp: sum(1 for p in POSITIONS_ORDER if (p[:2] if p.startswith(("cm","cv")) else p) == bp) for bp in base_positions}

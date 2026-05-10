@@ -1,6 +1,5 @@
 import streamlit as st
 from collections import defaultdict
-from itertools import product
 import math
 active_time = defaultdict(list)
 failure_log = defaultdict(list)
@@ -513,57 +512,12 @@ if st.button("Genereer opstellingen"):
                             reverse=True  # hoogste urgentie eerst
                         )
 
-                        # --- NIEUW: twee varianten proberen (vroeg->laat en laat->vroeg) ---
-                        best_score   = math.inf
-                        best_plan    = None
-                        best_minutes = None
-                        
-                        block_start = int(block_name.split("-")[0])
-                        block_end   = int(block_name.split("-")[1])
-                        
-                        for choices in product(time_slots, repeat=len(pairs_sorted)):
-                            # bouw plan: welke wissel op welke minuut
-                            plan = {m: [] for m in time_slots}
-                            valid = True
-                            for (inv, out), m in zip(pairs_sorted, choices):
-                                if len(plan[m]) >= MAX_PER_MOMENT:
-                                    valid = False
+                        moment_plan = {m: [] for m in time_slots}
+                        for pair in pairs_sorted:
+                            for m in time_slots:
+                                if len(moment_plan[m]) < MAX_PER_MOMENT:
+                                    moment_plan[m].append(pair)
                                     break
-                                plan[m].append((inv, out))
-                            if not valid:
-                                continue
-                        
-                            # minuten simuleren zonder echte data te overschrijven
-                            temp_minutes = actual_mins_so_far.copy()
-                            current_set  = set(schedule[block_name].values())
-                            t = block_start
-                        
-                            for m in sorted(plan.keys()):
-                                elapsed = m - t
-                                for sp in current_set:
-                                    temp_minutes[sp] += elapsed
-                                for i, o in plan[m]:
-                                    if o in current_set:
-                                        current_set.remove(o)
-                                    current_set.add(i)
-                                t = m
-                        
-                            for sp in current_set:
-                                temp_minutes[sp] += block_end - t
-                        
-                            # totale afwijking berekenen
-                            score = sum(abs(temp_minutes[p] - targets[p]) for p in selected_players.keys())
-                        
-                            if score < best_score:
-                                best_score   = score
-                                best_plan    = plan
-                                best_minutes = temp_minutes
-                        
-                        # beste plan kiezen
-                        moment_plan        = best_plan
-                        actual_mins_so_far = best_minutes
-
-
 
                         for m in time_slots:
                             if moment_plan[m]:

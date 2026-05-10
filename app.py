@@ -583,8 +583,15 @@ if st.button("Genereer opstellingen"):
                         
                         moment_plan = {m: [] for m in time_slots}
 
-                        # NIEUW — spelers met meeste minuten komen later in (krijgen -5 min)
-                        pairs_sorted = sorted(pairs, key=lambda pair: -mins[pair[0]])
+                        # NIEUW — meeste tekort valt het vroegst in, meeste overschot gaat het vroegst eraf
+                        pairs_sorted = sorted(
+                            pairs,
+                            key=lambda pair: (
+                                (targets[pair[0]] - mins[pair[0]])   # invaller: groot tekort = vroeg erin
+                                + (mins[pair[1]] - targets[pair[1]]) # uitvaller: groot overschot = vroeg eraf
+                            ),
+                            reverse=True  # hoogste urgentie eerst
+                        )
                         
                         for pair in pairs_sorted:
                             placed = False

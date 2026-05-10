@@ -512,12 +512,56 @@ if st.button("Genereer opstellingen"):
                             reverse=True  # hoogste urgentie eerst
                         )
 
-                        moment_plan = {m: [] for m in time_slots}
-                        for pair in pairs_sorted:
-                            for m in time_slots:
-                                if len(moment_plan[m]) < MAX_PER_MOMENT:
-                                    moment_plan[m].append(pair)
-                                    break
+                        # --- NIEUW: twee varianten proberen (vroeg->laat en laat->vroeg) ---
+
+                        def simulate_plan(order):
+                            # order = "early" of "late"
+                            plan = {m: [] for m in time_slots}
+                            for pair in pairs_sorted:
+                                slots = time_slots if order == "early" else list(reversed(time_slots))
+                                for m in slots:
+                                    if len(plan[m]) < MAX_PER_MOMENT:
+                                        plan[m].append(pair)
+                                        break
+                        
+                            # minuten simuleren zonder echte data te overschrijven
+                            temp_minutes = actual_mins_so_far.copy()
+                        
+                            block_start = int(block_name.split("-")[0])
+                            block_end   = int(block_name.split("-")[1])
+                            current_set = set(schedule[block_name].values())
+                            t = block_start
+                        
+                            for m in sorted(plan.keys()):
+                                elapsed = m - t
+                                for sp in current_set:
+                                    temp_minutes[sp] += elapsed
+                                for i, o in plan[m]:
+                                    if o in current_set:
+                                        current_set.remove(o)
+                                    current_set.add(i)
+                                t = m
+                        
+                            for sp in current_set:
+                                temp_minutes[sp] += block_end - t
+                        
+                            # totale afwijking berekenen
+                            score = sum(abs(temp_minutes[p] - targets[p]) for p in selected_players.keys())
+                            return score, plan, temp_minutes
+                        
+                        
+                        # --- beide opties testen ---
+                        score_early, plan_early, mins_early = simulate_plan("early")
+                        score_late,  plan_late,  mins_late  = simulate_plan("late")
+                        
+                        # --- beste kiezen ---
+                        if score_late < score_early:
+                            moment_plan = plan_late
+                            actual_mins_so_far = mins_late
+                        else:
+                            moment_plan = plan_early
+                            actual_mins_so_far = mins_early
+
 
                         for m in time_slots:
                             if moment_plan[m]:

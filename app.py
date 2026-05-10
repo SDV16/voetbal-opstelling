@@ -569,12 +569,19 @@ if st.button("Genereer opstellingen"):
                         st.markdown("_Geen logische wissels mogelijk_")
                         all_moment_plans[block_name] = {}
                     else:
+                        # NIEUW
                         base_minute = int(block_name.split("-")[0])
                         base_minute = 5 * round(base_minute / 5)
-                        time_slots = [base_minute, base_minute + 5]
-                
+                        
+                        if base_minute == 45:
+                            # Rust: alles mag tegelijk, geen gespreide wissels
+                            time_slots = [45]
+                            MAX_PER_MOMENT = len(pairs)
+                        else:
+                            time_slots = [base_minute, base_minute + 5]
+                            MAX_PER_MOMENT = 2
+                        
                         moment_plan = {m: [] for m in time_slots}
-                        MAX_PER_MOMENT = 2
 
                         # NIEUW — spelers met meeste minuten komen later in (krijgen -5 min)
                         pairs_sorted = sorted(pairs, key=lambda pair: -mins[pair[0]])

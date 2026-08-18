@@ -16,8 +16,6 @@ PLAYERS = {
     "Jaimy": {"favourite":["sp"], "alternative":["lb","rb"], "emergency":[]},
     "Sjoerd": {"favourite":["cm"], "alternative":["sp"], "emergency":[]},
     "Pelle": {"favourite":["sp", "rb"], "alternative":["cm", "lb"], "emergency":[]},
-    "Tim": {"favourite":["cm"], "alternative":["sp"], "emergency":[]},
-    "Steijn": {"favourite":["cm"], "alternative":[], "emergency":["sp"]},
     "Jorra": {"favourite":["cm"], "alternative":[], "emergency":[]},
     "Tycho": {"favourite":["cm"], "alternative":[], "emergency":[]},
     "Nord": {"favourite":["la"], "alternative":["ra"], "emergency":["cv"]},
@@ -37,6 +35,8 @@ PLAYERS = {
     "Lukas": {"favourite":["cv"], "alternative":[], "emergency":["la", "ra"]},
     "Abel": {"favourite":["lb", "rb"], "alternative":[], "emergency":[]},
     "Niels": {"favourite":["ra", "la"], "alternative":["cm"], "emergency":[]},
+    "Tim": {"favourite":["cm"], "alternative":["sp"], "emergency":[]},
+    "Steijn": {"favourite":["cm"], "alternative":[], "emergency":["sp"]},
 }
 
 def compute_dynamic_position_order(players):

@@ -65,6 +65,13 @@ def compute_dynamic_position_order(players):
 TOTAL_FIELD_MINUTES = 90 * 10
 BLOCK_OPTIONS = [30, 22.5, 20, 15, 10]
 
+# Toegestane afwijking (in minuten) t.o.v. ieders streefminuten, oplopend.
+# choose_best_blocks begint bij het eerste (strengste) niveau en verruimt
+# alleen naar het volgende niveau als er ECHT nergens een geldige opstelling
+# mogelijk is bij het huidige niveau. Dit is de enige plek waar iemand
+# langer/korter mag spelen dan 'eerlijk' - positie-eisen staan hier los van.
+SLACK_LEVELS = [5, 10, 20, 35, 60, 999]
+
 # =====================================================
 # UI
 # =====================================================
@@ -179,30 +186,153 @@ def scarcity_bonus(player, pos, players):
     return 0
 
 # =====================================================
+# HAALBAARHEIDSCHECK (structureel, los van eerlijke verdeling)
+# =====================================================
+def _bipartite_max_matching(slot_candidates):
+    """
+    Exacte maximum bipartite matching (Kuhn's algoritme / augmenting paths).
+    slot_candidates: dict {slot_naam: [spelers die deze slot mogen vervullen]}.
+    Retourneert (matching {slot: speler}, lijst met slots zonder speler).
+
+    Dit vindt - anders dan een greedy 'vul gewoon van boven naar beneden in'
+    aanpak - ook oplossingen waarbij spelers via een rondje van 3+ herverdeeld
+    moeten worden om alle posities gelijktijdig gevuld te krijgen. Als er
+    hierna nog steeds slots onvervuld zijn, bestaat er dus ECHT geen manier
+    om deze posities in deze helft tegelijk te vullen met de huidige selectie
+    en beschikbaarheid - dat lost geen enkele hoeveelheid wisselen of
+    extra/minder speeltijd op.
+    """
+    match_slot_to_player = {}
+    match_player_to_slot = {}
+
+    def try_assign(slot, visited):
+        for p in slot_candidates[slot]:
+            if p in visited:
+                continue
+            visited.add(p)
+            if p not in match_player_to_slot or try_assign(match_player_to_slot[p], visited):
+                match_slot_to_player[slot] = p
+                match_player_to_slot[p]    = slot
+                return True
+        return False
+
+    for slot in slot_candidates:
+        try_assign(slot, set())
+
+    unmatched = [slot for slot in slot_candidates if slot not in match_slot_to_player]
+    return match_slot_to_player, unmatched
+
+
+def check_structural_feasibility(players, positions_order, availability_flags):
+    """
+    Kijkt - los van eerlijke minutenverdeling - of er voor de eerste en
+    tweede helft uberhaupt een geldige, gelijktijdige invulling van alle
+    posities bestaat (favourite/alternative/emergency + beschikbaar in die
+    helft). We toetsen dit per helft (i.p.v. per tijdsblok) omdat
+    beschikbaarheid (1e/2e helft-only) alleen op de helft-grens verandert;
+    binnen een helft blijft dezelfde speler-op-positie-mogelijkheid gelden,
+    ongeacht hoe de blokken er precies uitzien of wie wanneer wisselt.
+
+    Retourneert: dict {"eerste helft": [(basispositie, tekort), ...],
+                        "tweede helft": [(basispositie, tekort), ...]}
+    Een lege lijst betekent: geen structureel tekort in die helft.
+    """
+    shortages = {}
+    for helft_naam, block_ref in (("eerste helft", "0-45"), ("tweede helft", "45-90")):
+        slot_candidates = {
+            pos: [
+                p for p in players
+                if allowed_in_block(p, block_ref, availability_flags)
+                and position_rank(p, pos) != 999
+            ]
+            for pos in positions_order
+        }
+        _, unmatched = _bipartite_max_matching(slot_candidates)
+
+        tekort_per_basis = defaultdict(int)
+        for slot in unmatched:
+            base = slot[:2] if slot.startswith(("cm", "cv")) else slot
+            tekort_per_basis[base] += 1
+
+        shortages[helft_naam] = sorted(tekort_per_basis.items())
+    return shortages
+
+# =====================================================
 # POSITIE SWAP OPTIMALISATIE
 # =====================================================
 def optimize_position_swaps(block_assignment):
-    """Wissel spelers onderling van positie als dat hun voorkeur verbetert."""
-    improved = True
-    while improved:
-        improved  = False
-        positions = list(block_assignment.keys())
-        for i in range(len(positions)):
-            for j in range(i + 1, len(positions)):
-                pos_a    = positions[i]
-                pos_b    = positions[j]
-                player_a = block_assignment[pos_a]
-                player_b = block_assignment[pos_b]
+    """
+    Herverdeelt de spelers die al in dit blok staan optimaal over de posities
+    van dat blok (er komen geen spelers bij en er gaan geen spelers af), zodat
+    de totale positie-score (favourite/alternative/emergency) zo laag mogelijk
+    is. Dit lost het probleem exact op via bitmask-DP (het 'assignment
+    probleem'), in plaats van alleen los-paarsgewijze wissels te proberen.
 
-                huidige_score = position_rank(player_a, pos_a) + position_rank(player_b, pos_b)
-                swap_score    = position_rank(player_a, pos_b) + position_rank(player_b, pos_a)
+    Waarom niet gewoon paarsgewijs wisselen? Paarsgewijs wisselen mist
+    verbeteringen die pas ontstaan als 3 of meer spelers tegelijk van positie
+    rouleren (A -> positie van B, B -> positie van C, C -> positie van A).
+    Zo'n rondje kan nodig zijn omdat elke afzonderlijke wissel uit dat rondje
+    niet geldig of niet verbeterend is, terwijl het rondje als geheel wel
+    iedereen op een betere positie zet. Bijvoorbeeld met:
+        Jens:   favourite=cv,  emergency=ra/la
+        Sietse: favourite=ra,  alternative=la, emergency=cv
+    is de wissel Sietse<->Jens (cv<->ra) een simpel paar en werkte al met de
+    oude code. Bij 3+ spelers loste de oude code dat soort combinaties niet
+    altijd op; deze versie wel, want die bekijkt alle posities in het blok in
+    één keer i.p.v. steeds twee tegelijk.
 
-                if swap_score < huidige_score:
-                    if position_rank(player_a, pos_b) != 999 and position_rank(player_b, pos_a) != 999:
-                        block_assignment[pos_a] = player_b
-                        block_assignment[pos_b] = player_a
-                        improved = True
-    return block_assignment
+    Posities waar een speler geen favourite/alternative/emergency voor heeft
+    (rank 999) worden nooit gekozen - die harde eis blijft ongewijzigd.
+    """
+    positions = list(block_assignment.keys())
+    players   = [block_assignment[pos] for pos in positions]
+    n         = len(positions)
+    INF       = 10 ** 6
+
+    # cost[i][j] = kosten om players[j] op positions[i] te zetten (INF = niet toegestaan)
+    cost = [[0] * n for _ in range(n)]
+    for i, pos in enumerate(positions):
+        for j, pl in enumerate(players):
+            r = position_rank(pl, pos)
+            cost[i][j] = r if r != 999 else INF
+
+    FULL   = 1 << n
+    dp     = [[INF] * FULL for _ in range(n + 1)]
+    choice = [[-1] * FULL for _ in range(n + 1)]
+    dp[0][0] = 0
+
+    for i in range(n):
+        row = dp[i]
+        for mask in range(FULL):
+            cur = row[mask]
+            if cur >= INF:
+                continue
+            for j in range(n):
+                if mask & (1 << j):
+                    continue
+                c = cost[i][j]
+                if c >= INF:
+                    continue
+                new_mask = mask | (1 << j)
+                new_cost = cur + c
+                if new_cost < dp[i + 1][new_mask]:
+                    dp[i + 1][new_mask]    = new_cost
+                    choice[i + 1][new_mask] = j
+
+    full_mask = FULL - 1
+    if dp[n][full_mask] >= INF:
+        # Kan in theorie niet gebeuren (de huidige toewijzing is zelf al
+        # geldig), maar voor de zekerheid: laat de toewijzing dan ongewijzigd.
+        return block_assignment
+
+    mask = full_mask
+    player_for_index = [None] * n
+    for i in range(n, 0, -1):
+        j = choice[i][mask]
+        player_for_index[i - 1] = j
+        mask ^= (1 << j)
+
+    return {positions[i]: players[player_for_index[i]] for i in range(n)}
 
 # =====================================================
 # BLOKGENERATOR
@@ -246,7 +376,14 @@ def build_blocks_from_pattern(pattern):
 # =====================================================
 # GENERATE SCHEDULE
 # =====================================================
-def generate_schedule(players, targets, priority_flags, blocks):
+def generate_schedule(players, targets, priority_flags, blocks, slack=5):
+    """
+    slack: hoeveel minuten een speler boven zijn streefminuten mag uitkomen
+    voordat hij als kandidaat voor een positie wordt uitgesloten. Dit is de
+    ENIGE knop die 'iemand mag langer/korter spelen' regelt - de eis dat een
+    speler favourite/alternative/emergency voor een positie moet zijn
+    (position_rank != 999) blijft ALTIJD hard, ongeacht slack.
+    """
     remaining        = targets.copy()
     schedule         = {}
     played           = defaultdict(list)
@@ -267,8 +404,8 @@ def generate_schedule(players, targets, priority_flags, blocks):
             for p in players:
                 if p in used:                                       continue
                 if not allowed_in_block(p, b_name, availability_flags): continue
-                if position_rank(p, pos) == 999:                   continue
-                if remaining[p] - b_min < -5:                      continue
+                if position_rank(p, pos) == 999:                   continue   # positie-eis: altijd hard
+                if remaining[p] - b_min < -slack:                  continue
                 cands.append(p)
 
             if not cands:
@@ -319,12 +456,12 @@ def generate_schedule(players, targets, priority_flags, blocks):
 # =====================================================
 # EVALUATIE
 # =====================================================
-def evaluate_blocks(players, training_counts, priority_flags, pattern, max_minutes):
+def evaluate_blocks(players, training_counts, priority_flags, pattern, max_minutes, slack=5):
     blocks = build_blocks_from_pattern(pattern)
     if blocks is None:
         return float('inf'), None, None, None, None
     targets  = calculate_target_minutes(players, training_counts, max_minutes)
-    schedule, _ = generate_schedule(players, targets, priority_flags, blocks)
+    schedule, _ = generate_schedule(players, targets, priority_flags, blocks, slack)
     if schedule is None:
         return float('inf'), None, None, None, None
     mins = defaultdict(float)
@@ -341,35 +478,48 @@ def evaluate_blocks(players, training_counts, priority_flags, pattern, max_minut
 # BESTE BLOKKEN
 # =====================================================
 def choose_best_blocks(players, training_counts, priority_flags, max_minutes):
-    for pat in generate_block_patterns(True):
-        td, bl, sc, tg, mn = evaluate_blocks(players, training_counts, priority_flags, pat, max_minutes)
-        if sc is None: continue
-        devs = [abs(mn[p] - tg[p]) for p in players]
-        if max(devs) <= 9:
-            return bl, sc, tg, mn, True, max(devs), td
+    """
+    Probeert eerst de strakke afwijking (SLACK_LEVELS[0], standaard 5 min).
+    Lukt dat nergens, dan wordt de toegestane afwijking t.o.v. de streef-
+    minuten stap voor stap verruimd (iemand mag dan langer/korter spelen dan
+    'eerlijk' zou zijn) totdat er wel een volledige, geldige opstelling
+    gevonden wordt. De positie-eis (favourite/alternative/emergency) wordt
+    hierbij nooit losgelaten - zie generate_schedule/position_rank.
+    Geeft als laatste element de daadwerkelijk benodigde slack terug, zodat
+    de UI kan laten zien of en waarom er van de eerlijke verdeling is
+    afgeweken.
+    """
+    for slack in SLACK_LEVELS:
+        for pat in generate_block_patterns(True):
+            td, bl, sc, tg, mn = evaluate_blocks(players, training_counts, priority_flags, pat, max_minutes, slack)
+            if sc is None: continue
+            devs = [abs(mn[p] - tg[p]) for p in players]
+            if max(devs) <= 9:
+                return bl, sc, tg, mn, True, max(devs), td, slack
 
-    best_score = float('inf')
-    best       = None, None, None, None
-    best_md    = 0
-    best_td    = 0
+        best_score = float('inf')
+        best       = None, None, None, None
+        best_md    = 0
+        best_td    = 0
 
-    for pat in generate_block_patterns(False):
-        td, bl, sc, tg, mn = evaluate_blocks(players, training_counts, priority_flags, pat, max_minutes)
-        if sc is None: continue
-        devs           = [abs(mn[p] - tg[p]) for p in players]
-        md             = max(devs)
-        deviation_cost = sum((max(0, abs(d) - 5)) ** 2 for d in devs)
-        big_outliers   = sum(1 for d in devs if abs(d) >= 10) * 20000
-        score          = deviation_cost * 200 + big_outliers + md * 10000
-        if score < best_score:
-            best_score = score
-            best       = bl, sc, tg, mn
-            best_md    = md
-            best_td    = td
+        for pat in generate_block_patterns(False):
+            td, bl, sc, tg, mn = evaluate_blocks(players, training_counts, priority_flags, pat, max_minutes, slack)
+            if sc is None: continue
+            devs           = [abs(mn[p] - tg[p]) for p in players]
+            md             = max(devs)
+            deviation_cost = sum((max(0, abs(d) - 5)) ** 2 for d in devs)
+            big_outliers   = sum(1 for d in devs if abs(d) >= 10) * 20000
+            score          = deviation_cost * 200 + big_outliers + md * 10000
+            if score < best_score:
+                best_score = score
+                best       = bl, sc, tg, mn
+                best_md    = md
+                best_td    = td
 
-    if best[0] is not None:
-        return *best, False, best_md, best_td
-    return None, None, None, None, None, 0, 0
+        if best[0] is not None:
+            return *best, False, best_md, best_td, slack
+
+    return None, None, None, None, None, 0, 0, SLACK_LEVELS[-1]
 
 # =====================================================
 # OUTPUT
@@ -380,18 +530,55 @@ if st.button("Genereer opstellingen"):
         st.error("Minimaal 10 spelers nodig")
     else:
         POSITIONS_ORDER = compute_dynamic_position_order(selected_players.keys())
+
+        # Eerst checken of er uberhaupt een geldige invulling bestaat, los van
+        # eerlijke verdeling. Dit is snel en geeft een concrete, betrouwbare
+        # melding (positie + aantal + helft) i.p.v. de zware zoektocht te
+        # laten mislukken en dan pas te ontdekken dat het sowieso niet kon.
+        shortages = check_structural_feasibility(
+            list(selected_players.keys()), POSITIONS_ORDER, availability_flags
+        )
+        if any(shortages.values()):
+            st.error("Deze selectie kan onmogelijk een volledige opstelling vullen — dat lost geen enkele wissel of extra/minder speeltijd op.")
+            for helft_naam, tekorten in shortages.items():
+                for basis, aantal in tekorten:
+                    st.write(
+                        f"- Je hebt nog **{aantal}x {basis.upper()}** nodig voor de **{helft_naam}** "
+                        f"(niemand van de geselecteerde spelers die favourite, alternative of emergency "
+                        f"op deze positie heeft, is in die helft beschikbaar)."
+                    )
+            st.info("Los dit op door een speler toe te voegen die deze positie kan spelen, of door bij een speler de 1e/2e helft-beperking uit te zetten.")
+            st.stop()
+
         res = choose_best_blocks(list(selected_players.keys()), training_counts, priority_flags, max_minutes)
 
         if res[0] is None:
-            st.error("Geen opstelling gevonden.")
+            st.error("Geen opstelling gevonden, ook niet met extra/minder speeltijd toestaan.")
+            st.caption("Dit ligt vermoedelijk aan de ingestelde 'Max minuten' per speler — controleer of die niet te streng zijn voor spelers die veel nodig zijn.")
             if failure_log["short"]:
-                st.subheader("Waarom niet gelukt:")
+                st.subheader("Details:")
                 from collections import Counter
                 counts = Counter(failure_log["short"])
                 for msg, count in counts.items():
                     st.write(f"- {msg}" + (f" (x{count})" if count > 1 else ""))
         else:
-            blocks, schedule, targets, mins, is_strict, max_dev, total_dev = res
+            blocks, schedule, targets, mins, is_strict, max_dev, total_dev, slack_used = res
+
+            if slack_used > SLACK_LEVELS[0]:
+                afwijkingen = sorted(
+                    ((p, mins[p] - targets[p]) for p in selected_players),
+                    key=lambda x: -abs(x[1])
+                )
+                grote_afwijkingen = [(p, d) for p, d in afwijkingen if abs(d) >= 5]
+                if grote_afwijkingen:
+                    st.warning(
+                        "Een exact eerlijke verdeling paste niet bij deze selectie/instellingen. "
+                        "Om toch een volledige opstelling te maken, spelen deze spelers meer of minder dan hun streefminuten: "
+                        + "; ".join(
+                            f"{p} ({'+' if d > 0 else ''}{int(round(d))} min)"
+                            for p, d in grote_afwijkingen
+                        )
+                    )
 
             st.subheader("Gebruikte blokken")
             st.write(", ".join(f"{n} ({int(m)} min)" for n, m in blocks))
@@ -422,7 +609,7 @@ if st.button("Genereer opstellingen"):
                     for left, right in [("lb", "rb"), ("la", "ra")]:
                         p_left  = pos_map.get(left)
                         p_right = pos_map.get(right)
-                        if not p_left or not p_right:          continue
+                        if not p_left  or not p_right:          continue
                         if p_left  in (None, "FOUT"):          continue
                         if p_right in (None, "FOUT"):          continue
                         fav_left  = PLAYERS.get(p_left,  {}).get("favourite", [])

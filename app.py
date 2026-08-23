@@ -158,8 +158,6 @@ if grouped["Overig"]:
         for player in grouped["Overig"]:
             is_checked[player] = st.checkbox(player, key=f"sel_{player}")
 
-st.caption("Favourite, alternative en emergency; helftbeperkingen pas bij genereren.")
-
 st.divider()
 
 selected_players = {}

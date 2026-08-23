@@ -122,31 +122,30 @@ for (cat_naam, cat_posities), col in zip(POSITION_CATEGORIES, cat_cols):
 
         # Live tellertje: hoeveel aangevinkte spelers kunnen elke positie spelen?
         # Favourite, alternative en emergency tellen allemaal mee.
-        tellers = []
-        
-        alle_posities = ["sp", "lb", "rb", "cm", "la", "cv", "ra"]
-        
-        for pos in alle_posities:
-            nodig = SLOTS_PER_POS[pos]
-        
-            spelers_die_pos_kunnen = sum(
-                1
-                for p in spelers_hier
-                if is_checked.get(p)
-                and (
-                    pos in PLAYERS[p]["favourite"]
-                    or pos in PLAYERS[p]["alternative"]
-                    or pos in PLAYERS[p]["emergency"]
+
+            tellers = []
+            
+            for pos in cat_posities:
+                nodig = SLOTS_PER_POS[pos]
+            
+                spelers_die_pos_kunnen = sum(
+                    1
+                    for p in PLAYERS
+                    if is_checked.get(p)
+                    and (
+                        pos in PLAYERS[p]["favourite"]
+                        or pos in PLAYERS[p]["alternative"]
+                        or pos in PLAYERS[p]["emergency"]
+                    )
                 )
-            )
-        
-            teken = "✅" if spelers_die_pos_kunnen >= nodig else "⚠️"
-        
-            tellers.append(
-                f"{teken} {pos.upper()}: {spelers_die_pos_kunnen}/{nodig}"
-            )
-        
-        st.caption("  \n".join(tellers))
+            
+                teken = "✅" if spelers_die_pos_kunnen >= nodig else "⚠️"
+            
+                tellers.append(
+                    f"{teken} {pos.upper()}: {spelers_die_pos_kunnen}/{nodig}"
+                )
+            
+            st.caption("  \n".join(tellers))
 
 if grouped["Overig"]:
     with st.expander("Overig (geen favourite positie ingesteld)"):

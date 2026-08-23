@@ -120,13 +120,18 @@ for (cat_naam, cat_posities), col in zip(POSITION_CATEGORIES, cat_cols):
             with doelkolom:
                 is_checked[player] = st.checkbox(player, key=f"sel_{player}")
 
-        # Live tellertje: hoeveel favourite-spelers voor elke (sub)positie zijn aangevinkt,
-        # zodat meteen zichtbaar is of er een positie te kort dreigt te komen.
+        # Live tellertje: hoeveel aangevinkte spelers kunnen elke positie spelen?
+        # Favourite, alternative en emergency tellen allemaal mee.
         tellers = []
-        for pos in cat_posities:
+        
+        alle_posities = ["sp", "lb", "rb", "cm", "la", "cv", "ra"]
+        
+        for pos in alle_posities:
             nodig = SLOTS_PER_POS[pos]
+        
             spelers_die_pos_kunnen = sum(
-                1 for p in spelers_hier
+                1
+                for p in spelers_hier
                 if is_checked.get(p)
                 and (
                     pos in PLAYERS[p]["favourite"]
@@ -134,7 +139,9 @@ for (cat_naam, cat_posities), col in zip(POSITION_CATEGORIES, cat_cols):
                     or pos in PLAYERS[p]["emergency"]
                 )
             )
+        
             teken = "✅" if spelers_die_pos_kunnen >= nodig else "⚠️"
+        
             tellers.append(
                 f"{teken} {pos.upper()}: {spelers_die_pos_kunnen}/{nodig}"
             )

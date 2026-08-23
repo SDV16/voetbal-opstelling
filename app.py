@@ -125,11 +125,20 @@ for (cat_naam, cat_posities), col in zip(POSITION_CATEGORIES, cat_cols):
         tellers = []
         for pos in cat_posities:
             nodig = SLOTS_PER_POS[pos]
-            fav_aangevinkt = sum(
-                1 for p in spelers_hier if is_checked.get(p) and pos in PLAYERS[p]["favourite"]
+            spelers_die_pos_kunnen = sum(
+                1 for p in spelers_hier
+                if is_checked.get(p)
+                and (
+                    pos in PLAYERS[p]["favourite"]
+                    or pos in PLAYERS[p]["alternative"]
+                    or pos in PLAYERS[p]["emergency"]
+                )
             )
-            teken = "✅" if fav_aangevinkt >= nodig else "⚠️"
-            tellers.append(f"{teken} {pos.upper()}: {fav_aangevinkt}/{nodig} favourite")
+            teken = "✅" if spelers_die_pos_kunnen >= nodig else "⚠️"
+            tellers.append(
+                f"{teken} {pos.upper()}: {spelers_die_pos_kunnen}/{nodig}"
+            )
+        
         st.caption("  \n".join(tellers))
 
 if grouped["Overig"]:

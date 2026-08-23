@@ -158,7 +158,7 @@ if grouped["Overig"]:
         for player in grouped["Overig"]:
             is_checked[player] = st.checkbox(player, key=f"sel_{player}")
 
-st.caption("Bovenstaande telling kijkt alleen naar favourite-posities en 1e/2e-helft-beperkingen negeert 'm nog; de echte, volledige haalbaarheidscheck gebeurt pas bij 'Genereer opstellingen'.")
+st.caption("Favourite, alternative en emergency; helftbeperkingen pas bij genereren.")
 
 st.divider()
 

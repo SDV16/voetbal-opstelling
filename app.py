@@ -107,44 +107,50 @@ for player in PLAYERS:
 is_checked = {}  # speler -> aangevinkt of niet, gevuld tijdens het tekenen van de vinkjes hieronder
 
 cat_cols = st.columns(len(POSITION_CATEGORIES))
+
 for (cat_naam, cat_posities), col in zip(POSITION_CATEGORIES, cat_cols):
     with col:
         st.markdown(f"**{cat_naam}**")
         st.caption(" / ".join(p.upper() for p in cat_posities))
 
         spelers_hier = grouped[cat_naam]
-        helft        = (len(spelers_hier) + 1) // 2
+        helft = (len(spelers_hier) + 1) // 2
+
         sub_a, sub_b = st.columns(2)
+
         for idx, player in enumerate(spelers_hier):
             doelkolom = sub_a if idx < helft else sub_b
+
             with doelkolom:
-                is_checked[player] = st.checkbox(player, key=f"sel_{player}")
+                is_checked[player] = st.checkbox(
+                    player,
+                    key=f"sel_{player}"
+                )
 
-        # Live tellertje: hoeveel aangevinkte spelers kunnen elke positie spelen?
-        # Favourite, alternative en emergency tellen allemaal mee.
-
+for (cat_naam, cat_posities), col in zip(POSITION_CATEGORIES, cat_cols):
+    with col:
         tellers = []
-        
+
         for pos in cat_posities:
             nodig = SLOTS_PER_POS[pos]
-        
+
             spelers_die_pos_kunnen = sum(
                 1
                 for p in PLAYERS
-                if is_checked.get(p)
+                if is_checked.get(p, False)
                 and (
                     pos in PLAYERS[p]["favourite"]
                     or pos in PLAYERS[p]["alternative"]
                     or pos in PLAYERS[p]["emergency"]
                 )
             )
-        
+
             teken = "✅" if spelers_die_pos_kunnen >= nodig else "⚠️"
-        
+
             tellers.append(
                 f"{teken} {pos.upper()}: {spelers_die_pos_kunnen}/{nodig}"
             )
-        
+
         st.caption("  \n".join(tellers))
 
 if grouped["Overig"]:
